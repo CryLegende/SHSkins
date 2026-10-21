@@ -1,0 +1,21 @@
+# URL de l'API pour récupérer les skins des joueurs.
+# Utilisez %player% pour le pseudo et %uuid% pour l'UUID du joueur.
+api-url: "http://127.0.0.1/api/skin-api/skins/%player%"
+
+# Configuration du cache pour les skins
+cache:
+  # Activer ou désactiver le cache des skins. Recommandé : true
+  enabled: true
+  # Durée de vie d'un skin dans le cache (en minutes) avant de le rafraîchir.
+  expire-after-write-minutes: 30
+  # Nombre maximum de skins à conserver en mémoire.
+  maximum-size: 1000
+
+# Configuration de l'API MineSkin (https://mineskin.org)
+mineskin:
+  # Votre clé d'API MineSkin (peut être laissée vide si vous n'en avez pas).
+  # Requis pour générer des skins à partir d'URLs.
+  api-key: "CHANGE_ME"
+
+# Activer les messages de débogage dans la console.
+debug: false
