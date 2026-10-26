@@ -76,11 +76,18 @@ public class SkinService {
         String url = config.getApiUrl()
             .replace("%player%", playerName)
             .replace("%uuid%", playerUUID.toString());
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(url))
-            .header("User-Agent", USER_AGENT)
-            .timeout(Duration.ofSeconds(5))
-            .build();
+        HttpRequest request;
+        try {
+            request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("User-Agent", USER_AGENT)
+                .timeout(Duration.ofSeconds(5))
+                .build();
+        } catch (IllegalArgumentException e) {
+            // URL de config invalide : sans ce garde, l'exception remonterait dans l'evenement de connexion de chaque joueur
+            logger.warn("api-url invalide pour " + playerName + " : " + url);
+            return CompletableFuture.completedFuture(Optional.empty());
+        }
 
         return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofByteArray())
             .thenApply(response -> {

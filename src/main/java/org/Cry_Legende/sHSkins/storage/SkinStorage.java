@@ -10,6 +10,7 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -35,9 +36,18 @@ public class SkinStorage {
      */
     public void saveSkin(UUID playerUUID, SkinData skinData) {
         Path playerFile = playerDataFolder.resolve(playerUUID + ".json");
+        // Fichier temporaire puis remplacement : un arret pendant l'ecriture (ou deux connexions simultanees du meme
+        // joueur) ne laisse pas un fichier de skin tronque, qui serait ensuite ignore par getSkin
+        Path temp = playerDataFolder.resolve(playerUUID + "." + UUID.randomUUID() + ".tmp");
         CompletableFuture.runAsync(() -> {
-            try (Writer writer = Files.newBufferedWriter(playerFile, StandardCharsets.UTF_8)) {
+            try (Writer writer = Files.newBufferedWriter(temp, StandardCharsets.UTF_8)) {
                 gson.toJson(skinData, writer);
+            } catch (Exception e) {
+                logger.error("Impossible de sauvegarder le skin pour " + playerUUID, e);
+                return;
+            }
+            try {
+                Files.move(temp, playerFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
             } catch (Exception e) {
                 logger.error("Impossible de sauvegarder le skin pour " + playerUUID, e);
             }
