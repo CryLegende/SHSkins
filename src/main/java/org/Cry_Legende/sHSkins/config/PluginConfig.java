@@ -20,7 +20,11 @@ public class PluginConfig {
     private int cacheExpireMinutes;
     private int cacheMaxSize;
     private String mineskinApiKey;
+    private String skinCommandMessage;
     private boolean debug;
+
+    private static final String DEFAULT_SKIN_COMMAND_MESSAGE = "&7&l« &e&lSH &8&l» &7Change ton &eskin &7sur "
+        + "&ehttps://skyhand.fr/skin-api &7: il s'applique automatiquement à tes prochaines connexions.";
 
     public PluginConfig(Path dataFolder, Logger logger) {
         this.dataFolder = dataFolder;
@@ -60,6 +64,7 @@ public class PluginConfig {
         this.cacheExpireMinutes = integer(cache, "expire-after-write-minutes", 60);
         this.cacheMaxSize = integer(cache, "maximum-size", 1000);
         this.mineskinApiKey = string(section(root, "mineskin"), "api-key", "");
+        this.skinCommandMessage = string(section(root, "commande-skin"), "message", DEFAULT_SKIN_COMMAND_MESSAGE);
         this.debug = bool(root, "debug", false);
     }
 
@@ -102,6 +107,10 @@ public class PluginConfig {
 
     public String getMineskinApiKey() {
         return mineskinApiKey;
+    }
+
+    public String getSkinCommandMessage() {
+        return skinCommandMessage;
     }
 
     public boolean isDebug() {

@@ -7,6 +7,7 @@ import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import org.Cry_Legende.sHSkins.cache.SkinCache;
+import org.Cry_Legende.sHSkins.command.SkinCommand;
 import org.Cry_Legende.sHSkins.config.PluginConfig;
 import org.Cry_Legende.sHSkins.listener.SkinListener;
 import org.Cry_Legende.sHSkins.service.SkinService;
@@ -52,6 +53,9 @@ public final class SHSkins {
         this.skinService = new SkinService(logger, skinCache, skinStorage, pluginConfig);
 
         proxy.getEventManager().register(this, new SkinListener(logger, skinService));
+        proxy.getCommandManager().register(
+            proxy.getCommandManager().metaBuilder("skin").aliases("skins").plugin(this).build(),
+            new SkinCommand(pluginConfig));
 
         logger.info("SHSkins a ete active avec succes !");
     }

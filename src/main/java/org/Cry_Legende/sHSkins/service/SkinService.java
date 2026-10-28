@@ -22,10 +22,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Pattern;
 
 public class SkinService {
 
     private static final String USER_AGENT = "SHSkins/" + SHSkins.VERSION;
+    private static final Pattern MOJANG_NAME = Pattern.compile("[A-Za-z0-9_]{1,16}");
 
     private final Logger logger;
     private final SkinCache skinCache;
@@ -42,14 +44,18 @@ public class SkinService {
         this.config = config;
     }
 
-    public CompletableFuture<Optional<SkinData>> getSkinData(String playerName, UUID playerUUID) {
+    /**
+     * @param lookupMojang false quand le profil porte deja les textures de son compte (connexion premium) :
+     *                     inutile alors de redemander a Mojang le meme skin.
+     */
+    public CompletableFuture<Optional<SkinData>> getSkinData(String playerName, UUID playerUUID, boolean lookupMojang) {
         Optional<SkinData> cachedSkin = skinCache.get(playerName);
         if (cachedSkin.isPresent()) {
             debug("Skin pour " + playerName + " trouve dans le cache en memoire.");
             return CompletableFuture.completedFuture(cachedSkin);
         }
 
-        return fetchFromExternalApis(playerName, playerUUID)
+        return fetchFromExternalApis(playerName, playerUUID, lookupMojang)
             .thenCompose(apiSkinOptional -> {
                 if (apiSkinOptional.isPresent()) {
                     SkinData authoritativeSkin = apiSkinOptional.get();
@@ -65,11 +71,14 @@ public class SkinService {
             });
     }
 
-    private CompletableFuture<Optional<SkinData>> fetchFromExternalApis(String playerName, UUID playerUUID) {
+    private CompletableFuture<Optional<SkinData>> fetchFromExternalApis(String playerName, UUID playerUUID,
+                                                                        boolean lookupMojang) {
         return fetchImageDataFromCustomApi(playerName, playerUUID)
             .thenCompose(imageDataOptional -> imageDataOptional
                 .map(this::generateSkinFromImageData)
-                .orElseGet(() -> fetchFromMojang(playerUUID)));
+                .orElseGet(() -> lookupMojang
+                    ? fetchFromMojang(playerName, playerUUID)
+                    : CompletableFuture.completedFuture(Optional.empty())));
     }
 
     private CompletableFuture<Optional<byte[]>> fetchImageDataFromCustomApi(String playerName, UUID playerUUID) {
@@ -176,14 +185,55 @@ public class SkinService {
         return HttpRequest.BodyPublishers.ofByteArrays(byteArrays);
     }
 
-    private CompletableFuture<Optional<SkinData>> fetchFromMojang(UUID playerUUID) {
-        // Le reseau tourne en UUID offline (version 3) : ce fallback ne se declenche
-        // que pour un profil premium reel, exactement comme la version BungeeCord.
-        if (playerUUID.version() != 4) {
+    /**
+     * Skin du compte Mojang qui porte ce pseudo (ce que faisait SkinsRestorer). Le reseau tourne en
+     * UUID offline (version 3) : sauf profil premium reel, il faut d'abord retrouver l'UUID Mojang du pseudo.
+     */
+    private CompletableFuture<Optional<SkinData>> fetchFromMojang(String playerName, UUID playerUUID) {
+        if (playerUUID.version() == 4) {
+            return fetchMojangProfile(playerUUID.toString().replace("-", ""));
+        }
+        return lookupMojangId(playerName)
+            .thenCompose(mojangId -> mojangId
+                .map(this::fetchMojangProfile)
+                .orElseGet(() -> CompletableFuture.completedFuture(Optional.empty())));
+    }
+
+    private CompletableFuture<Optional<String>> lookupMojangId(String playerName) {
+        // Un pseudo hors de ce format n'existe pas chez Mojang, et il finirait tel quel dans l'URL
+        if (!MOJANG_NAME.matcher(playerName).matches()) {
             return CompletableFuture.completedFuture(Optional.empty());
         }
-        String url = "https://sessionserver.mojang.com/session/minecraft/profile/"
-            + playerUUID.toString().replace("-", "") + "?unsigned=false";
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create("https://api.minecraftservices.com/minecraft/profile/lookup/name/" + playerName))
+            .header("User-Agent", USER_AGENT)
+            .timeout(Duration.ofSeconds(5))
+            .build();
+
+        return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+            .thenApply(response -> {
+                if (response.statusCode() == 200) {
+                    try {
+                        return Optional.of(JsonParser.parseString(response.body()).getAsJsonObject()
+                            .get("id").getAsString());
+                    } catch (Exception e) {
+                        logger.warn("Erreur de parsing de l'UUID Mojang de {}: {}", playerName, e.getMessage());
+                    }
+                } else if (response.statusCode() == 404) {
+                    debug("Aucun compte Mojang pour le pseudo " + playerName);
+                } else {
+                    logger.warn("Recherche Mojang du pseudo {} impossible (Code: {})", playerName, response.statusCode());
+                }
+                return Optional.<String>empty();
+            })
+            .exceptionally(exception -> {
+                logger.warn("Erreur de connexion a l'API Mojang", exception);
+                return Optional.empty();
+            });
+    }
+
+    private CompletableFuture<Optional<SkinData>> fetchMojangProfile(String mojangId) {
+        String url = "https://sessionserver.mojang.com/session/minecraft/profile/" + mojangId + "?unsigned=false";
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(url))
             .header("User-Agent", USER_AGENT)
@@ -200,7 +250,7 @@ public class SkinService {
                             properties.get("value").getAsString(),
                             properties.get("signature").getAsString()));
                     } catch (Exception e) {
-                        logger.warn("Erreur de parsing de la reponse de Mojang pour {}: {}", playerUUID, e.getMessage());
+                        logger.warn("Erreur de parsing de la reponse de Mojang pour {}: {}", mojangId, e.getMessage());
                     }
                 }
                 return Optional.<SkinData>empty();

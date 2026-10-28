@@ -42,7 +42,7 @@ public class SkinListener {
 
         Optional<SkinData> currentSkin = getExistingSkin(originalProfile);
 
-        CompletableFuture<Void> work = skinService.getSkinData(playerName, playerUUID)
+        CompletableFuture<Void> work = skinService.getSkinData(playerName, playerUUID, currentSkin.isEmpty())
             .thenAccept(targetSkinOptional -> {
                 if (targetSkinOptional.isEmpty()) {
                     return;

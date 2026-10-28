@@ -17,5 +17,9 @@ mineskin:
   # Requis pour générer des skins à partir d'URLs.
   api-key: "CHANGE_ME"
 
+# Commande /skin (alias /skins) : les skins se changent sur le site, elle renvoie juste vers la page.
+commande-skin:
+  message: "&7&l« &e&lSH &8&l» &7Change ton &eskin &7sur &ehttps://skyhand.fr/skin-api &7: il s'applique automatiquement à tes prochaines connexions."
+
 # Activer les messages de débogage dans la console.
 debug: false
