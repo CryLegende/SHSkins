@@ -18,6 +18,16 @@ Applique les skins SkyHand a la connexion
 
 Utilisé sur : **Proxy**.
 
+## Skins et capes
+
+À chaque connexion :
+
+1. le skin envoyé sur le site (skin-api), généré par MineSkin avec la cape choisie sur le profil ;
+2. sinon le skin du compte Minecraft du même pseudo, avec sa cape, régénéré seulement si le joueur a choisi une autre cape (ou aucune) ;
+3. si le site ou Mojang ne répond pas : le dernier skin enregistré du joueur.
+
+La cape se choisit sur le profil du site (carte « Ma cape », plugin skyhandsite) : celle du compte Minecraft (défaut), aucune, ou une cape officielle. MineSkin ne pose une cape que si la clé y a droit (offre Basic ou plus) : SHSkins relit toutes les heures les capes autorisées (`/v2/me/capes`), et sans offre payante les skins du site restent sans cape.
+
 ## Configuration
 
 Fichiers par défaut repris du serveur (secrets remplacés par `CHANGE_ME`). Cliquez sur un fichier pour l'ouvrir :

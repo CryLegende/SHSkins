@@ -2,6 +2,13 @@
 # Utilisez %player% pour le pseudo et %uuid% pour l'UUID du joueur.
 api-url: "http://127.0.0.1/api/skin-api/skins/%player%"
 
+# URL du choix de cape fait sur le site (carte « Ma cape » du profil), même syntaxe que api-url.
+# Réponse JSON {"cape": "auto"} : "auto" = la cape du compte Minecraft du même pseudo, "none" = aucune,
+# sinon l'UUID d'une cape MineSkin (https://api.mineskin.org/v2/capes). Vide : toujours "auto".
+# MineSkin ne pose une cape sur un skin du site qu'avec une offre payante (Basic et au-dessus) :
+# avec une clé gratuite, seuls les joueurs sans skin du site gardent la cape de leur compte.
+cape-api-url: "http://127.0.0.1/api/skyhandsite/cape/%player%"
+
 # Configuration du cache pour les skins
 cache:
   # Activer ou désactiver le cache des skins. Recommandé : true

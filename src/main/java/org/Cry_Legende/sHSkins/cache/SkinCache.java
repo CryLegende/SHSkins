@@ -9,33 +9,62 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Deux caches en memoire, aucun par joueur : un skin ou une cape change sur le site s'applique donc des la
+ * connexion suivante, sans attendre l'expiration.
+ * <ul>
+ *     <li>comptes Minecraft : pseudo -> textures du compte Mojang du meme pseudo (vide = aucun compte) ;</li>
+ *     <li>generations MineSkin : image (ou URL) du skin + cape -> textures signees. Le meme skin envoye par
+ *     plusieurs joueurs, ou par le meme joueur a chaque connexion, ne coute qu'une generation.</li>
+ * </ul>
+ */
 public class SkinCache {
 
-    private final Cache<String, SkinData> cache;
-    private final boolean isEnabled;
+    private static final int GENERATED_HOURS = 24;
+
+    private final Cache<String, Optional<SkinData>> accounts;
+    private final Cache<String, SkinData> generated;
 
     public SkinCache(PluginConfig config) {
-        this.isEnabled = config.isCacheEnabled();
-        if (this.isEnabled) {
-            this.cache = Caffeine.newBuilder()
+        if (config.isCacheEnabled()) {
+            this.accounts = Caffeine.newBuilder()
                 .expireAfterWrite(config.getCacheExpireMinutes(), TimeUnit.MINUTES)
                 .maximumSize(config.getCacheMaxSize())
                 .build();
+            this.generated = Caffeine.newBuilder()
+                .expireAfterWrite(GENERATED_HOURS, TimeUnit.HOURS)
+                .maximumSize(config.getCacheMaxSize())
+                .build();
         } else {
-            this.cache = null;
+            this.accounts = null;
+            this.generated = null;
         }
     }
 
-    public Optional<SkinData> get(String playerName) {
-        if (!isEnabled) {
-            return Optional.empty();
-        }
-        return Optional.ofNullable(cache.getIfPresent(playerName.toLowerCase(Locale.ROOT)));
+    /**
+     * @return vide si le compte n'est pas en cache ; sinon les textures du compte (elles-memes vides sans compte)
+     */
+    public Optional<Optional<SkinData>> getAccount(String playerName) {
+        return accounts == null ? Optional.empty() : Optional.ofNullable(accounts.getIfPresent(key(playerName)));
     }
 
-    public void put(String playerName, SkinData skinData) {
-        if (isEnabled) {
-            cache.put(playerName.toLowerCase(Locale.ROOT), skinData);
+    public void putAccount(String playerName, Optional<SkinData> textures) {
+        if (accounts != null) {
+            accounts.put(key(playerName), textures);
         }
+    }
+
+    public Optional<SkinData> getGenerated(String input) {
+        return generated == null ? Optional.empty() : Optional.ofNullable(generated.getIfPresent(input));
+    }
+
+    public void putGenerated(String input, SkinData skinData) {
+        if (generated != null) {
+            generated.put(input, skinData);
+        }
+    }
+
+    private static String key(String playerName) {
+        return playerName.toLowerCase(Locale.ROOT);
     }
 }

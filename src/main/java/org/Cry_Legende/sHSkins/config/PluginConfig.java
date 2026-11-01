@@ -16,6 +16,7 @@ public class PluginConfig {
     private final Logger logger;
 
     private String apiUrl;
+    private String capeApiUrl;
     private boolean cacheEnabled;
     private int cacheExpireMinutes;
     private int cacheMaxSize;
@@ -59,6 +60,8 @@ public class PluginConfig {
         }
 
         this.apiUrl = string(root, "api-url", "https://skyhand.fr/api/skin-api/skins/%player%");
+        // Vide (ancienne config) : pas de choix de cape, celle du compte Minecraft s'applique
+        this.capeApiUrl = string(root, "cape-api-url", "");
         Map<String, Object> cache = section(root, "cache");
         this.cacheEnabled = bool(cache, "enabled", true);
         this.cacheExpireMinutes = integer(cache, "expire-after-write-minutes", 60);
@@ -91,6 +94,10 @@ public class PluginConfig {
 
     public String getApiUrl() {
         return apiUrl;
+    }
+
+    public String getCapeApiUrl() {
+        return capeApiUrl;
     }
 
     public boolean isCacheEnabled() {

@@ -10,11 +10,15 @@ import org.Cry_Legende.sHSkins.cache.SkinCache;
 import org.Cry_Legende.sHSkins.command.SkinCommand;
 import org.Cry_Legende.sHSkins.config.PluginConfig;
 import org.Cry_Legende.sHSkins.listener.SkinListener;
+import org.Cry_Legende.sHSkins.service.CapeCatalog;
 import org.Cry_Legende.sHSkins.service.SkinService;
 import org.Cry_Legende.sHSkins.storage.SkinStorage;
 import org.slf4j.Logger;
 
+import java.net.http.HttpClient;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 @Plugin(
     id = "shskins",
@@ -25,7 +29,7 @@ import java.nio.file.Path;
 )
 public final class SHSkins {
 
-    public static final String VERSION = "2.0-velocity";
+    public static final String VERSION = "2.1-velocity";
 
     private final ProxyServer proxy;
     private final Logger logger;
@@ -34,6 +38,7 @@ public final class SHSkins {
     private PluginConfig pluginConfig;
     private SkinCache skinCache;
     private SkinStorage skinStorage;
+    private CapeCatalog capeCatalog;
     private SkinService skinService;
 
     @Inject
@@ -50,7 +55,17 @@ public final class SHSkins {
         this.pluginConfig = new PluginConfig(dataFolder, logger);
         this.skinCache = new SkinCache(pluginConfig);
         this.skinStorage = new SkinStorage(dataFolder, logger);
-        this.skinService = new SkinService(logger, skinCache, skinStorage, pluginConfig);
+        HttpClient httpClient = HttpClient.newBuilder()
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
+        this.capeCatalog = new CapeCatalog(logger, pluginConfig, httpClient, SkinService.userAgent());
+        this.skinService = new SkinService(logger, skinCache, skinStorage, pluginConfig, capeCatalog, httpClient);
+
+        // Capes autorisees par l'offre MineSkin : relues toutes les heures, un abonnement s'applique sans redemarrage
+        proxy.getScheduler().buildTask(this, capeCatalog::refresh)
+            .repeat(1, TimeUnit.HOURS)
+            .schedule();
 
         proxy.getEventManager().register(this, new SkinListener(logger, skinService));
         proxy.getCommandManager().register(
