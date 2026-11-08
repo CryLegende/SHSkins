@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 )
 public final class SHSkins {
 
-    public static final String VERSION = "2.1-velocity";
+    public static final String VERSION = "2.2-velocity";
 
     private final ProxyServer proxy;
     private final Logger logger;

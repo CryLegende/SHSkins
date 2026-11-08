@@ -69,4 +69,59 @@ public class SkinStorage {
             return Optional.empty();
         }
     }
+
+    /**
+     * Derniere reponse de Mojang pour le compte du meme pseudo : ses textures brutes, ou l'absence de compte.
+     * Fichier a part de {@code <uuid>.json} : il ne contient jamais un skin du site ni une cape posee par MineSkin.
+     *
+     * @param found     un compte Mojang existe pour ce pseudo
+     * @param checkedAt date de la reponse, en millisecondes
+     */
+    public record AccountEntry(boolean found, String value, String signature, long checkedAt) {
+
+        public Optional<SkinData> skin() {
+            return found && value != null ? Optional.of(new SkinData(value, signature)) : Optional.empty();
+        }
+    }
+
+    /**
+     * Sauvegarde la reponse de Mojang (textures du compte ou absence de compte), de maniere asynchrone et atomique.
+     */
+    public void saveAccount(UUID playerUUID, Optional<SkinData> account) {
+        long now = System.currentTimeMillis();
+        AccountEntry entry = account
+            .map(skin -> new AccountEntry(true, skin.value(), skin.signature(), now))
+            .orElseGet(() -> new AccountEntry(false, null, null, now));
+        Path accountFile = playerDataFolder.resolve(playerUUID + ".account.json");
+        Path temp = playerDataFolder.resolve(playerUUID + "." + UUID.randomUUID() + ".tmp");
+        CompletableFuture.runAsync(() -> {
+            try (Writer writer = Files.newBufferedWriter(temp, StandardCharsets.UTF_8)) {
+                gson.toJson(entry, writer);
+            } catch (Exception e) {
+                logger.error("Impossible de sauvegarder le compte Mojang pour " + playerUUID, e);
+                return;
+            }
+            try {
+                Files.move(temp, accountFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (Exception e) {
+                logger.error("Impossible de sauvegarder le compte Mojang pour " + playerUUID, e);
+            }
+        });
+    }
+
+    /**
+     * Derniere reponse de Mojang enregistree pour ce joueur, si elle existe.
+     */
+    public Optional<AccountEntry> getAccount(UUID playerUUID) {
+        Path accountFile = playerDataFolder.resolve(playerUUID + ".account.json");
+        if (!Files.exists(accountFile)) {
+            return Optional.empty();
+        }
+        try (Reader reader = Files.newBufferedReader(accountFile, StandardCharsets.UTF_8)) {
+            return Optional.ofNullable(gson.fromJson(reader, AccountEntry.class));
+        } catch (Exception e) {
+            logger.warn("Impossible de lire le compte Mojang enregistre pour " + playerUUID, e);
+            return Optional.empty();
+        }
+    }
 }

@@ -88,6 +88,12 @@ public class SkinService {
     private record Generation(SkinData skin, boolean capeRefused) {
     }
 
+    /** Duree pendant laquelle une absence de compte Mojang est crue sans redemander. */
+    private static final long ACCOUNT_ABSENT_TTL_MS = 24L * 60 * 60 * 1000;
+
+    /** Joueurs dont la relecture Mojang en arriere-plan est en cours (une seule a la fois par joueur). */
+    private final java.util.Set<UUID> accountRefreshes = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
     private final Logger logger;
     private final SkinCache skinCache;
     private final SkinStorage skinStorage;
@@ -226,6 +232,28 @@ public class SkinService {
             return completed(cached.get().isPresent() ? Fetched.found(cached.get().get()) : Fetched.absent());
         }
 
+        // Reponse de Mojang deja connue (fichier <uuid>.account.json) : servie tout de suite, sans attendre Mojang
+        // pendant la connexion (il repond parfois en 4-5 s), puis relue en arriere-plan pour la connexion suivante.
+        // Une absence de compte n'est gardee que 24 h.
+        Optional<SkinStorage.AccountEntry> stored = skinStorage.getAccount(playerUUID);
+        if (stored.isPresent() && (stored.get().found()
+                || System.currentTimeMillis() - stored.get().checkedAt() < ACCOUNT_ABSENT_TTL_MS)) {
+            Optional<SkinData> skin = stored.get().skin();
+            debug("Compte Mojang de " + playerName + " lu dans son fichier (" + (skin.isPresent() ? "textures" : "pas de compte")
+                + "), relu en arriere-plan.");
+            skinCache.putAccount(playerName, skin);
+            if (accountRefreshes.add(playerUUID)) {
+                fetchAccount(playerName, playerUUID).whenComplete((result, error) -> accountRefreshes.remove(playerUUID));
+            }
+            return completed(skin.isPresent() ? Fetched.found(skin.get()) : Fetched.absent());
+        }
+        return fetchAccount(playerName, playerUUID);
+    }
+
+    /**
+     * Interroge Mojang ; une reponse (compte ou absence de compte) remplit le cache memoire et le fichier du joueur.
+     */
+    private CompletableFuture<Fetched<SkinData>> fetchAccount(String playerName, UUID playerUUID) {
         // Le reseau tourne en UUID offline (version 3) : sauf UUID Mojang reel, il faut d'abord retrouver celui du pseudo
         CompletableFuture<Fetched<String>> mojangId = playerUUID.version() == 4
             ? completed(Fetched.found(playerUUID.toString().replace("-", "")))
@@ -240,6 +268,7 @@ public class SkinService {
             .thenApply(result -> {
                 if (result.status() != Status.ERROR) {
                     skinCache.putAccount(playerName, result.optional());
+                    skinStorage.saveAccount(playerUUID, result.optional());
                 }
                 return result;
             });
