@@ -99,14 +99,25 @@ public class SkinStorage {
                 gson.toJson(entry, writer);
             } catch (Exception e) {
                 logger.error("Impossible de sauvegarder le compte Mojang pour " + playerUUID, e);
+                deleteQuietly(temp);
                 return;
             }
             try {
                 Files.move(temp, accountFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
             } catch (Exception e) {
                 logger.error("Impossible de sauvegarder le compte Mojang pour " + playerUUID, e);
+                deleteQuietly(temp);
             }
         });
+    }
+
+    /** Un fichier temporaire d'une ecriture ratee ne doit pas rester dans playerdata. */
+    private void deleteQuietly(Path file) {
+        try {
+            Files.deleteIfExists(file);
+        } catch (Exception ignored) {
+            // Rien de plus a faire : le fichier final n'a pas ete touche
+        }
     }
 
     /**

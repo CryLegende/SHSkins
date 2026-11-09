@@ -268,7 +268,10 @@ public class SkinService {
             .thenApply(result -> {
                 if (result.status() != Status.ERROR) {
                     skinCache.putAccount(playerName, result.optional());
-                    skinStorage.saveAccount(playerUUID, result.optional());
+                    // Un pseudo hors format n'a pas interroge Mojang : rien a retenir sur disque pour lui
+                    if (MOJANG_NAME.matcher(playerName).matches()) {
+                        skinStorage.saveAccount(playerUUID, result.optional());
+                    }
                 }
                 return result;
             });
