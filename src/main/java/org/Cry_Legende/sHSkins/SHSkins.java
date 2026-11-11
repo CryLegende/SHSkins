@@ -7,7 +7,10 @@ import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import org.Cry_Legende.sHSkins.cache.SkinCache;
+import org.Cry_Legende.sHSkins.command.AdminCommand;
 import org.Cry_Legende.sHSkins.command.SkinCommand;
+import org.Cry_Legende.sHSkins.config.ConfigException;
+import org.Cry_Legende.sHSkins.config.Messages;
 import org.Cry_Legende.sHSkins.config.PluginConfig;
 import org.Cry_Legende.sHSkins.listener.SkinListener;
 import org.Cry_Legende.sHSkins.service.CapeCatalog;
@@ -29,13 +32,14 @@ import java.util.concurrent.TimeUnit;
 )
 public final class SHSkins {
 
-    public static final String VERSION = "2.2-velocity";
+    public static final String VERSION = "2.3-velocity";
 
     private final ProxyServer proxy;
     private final Logger logger;
     private final Path dataFolder;
 
     private PluginConfig pluginConfig;
+    private Messages messages;
     private SkinCache skinCache;
     private SkinStorage skinStorage;
     private CapeCatalog capeCatalog;
@@ -53,6 +57,8 @@ public final class SHSkins {
         logger.info("Demarrage de SHSkins...");
 
         this.pluginConfig = new PluginConfig(dataFolder, logger);
+        // messages.yml est cree au premier demarrage, avec le texte de /skin de l'ancien config.yml
+        this.messages = new Messages(dataFolder, logger, pluginConfig.getLegacySkinCommandMessage());
         this.skinCache = new SkinCache(pluginConfig);
         this.skinStorage = new SkinStorage(dataFolder, logger);
         HttpClient httpClient = HttpClient.newBuilder()
@@ -70,9 +76,31 @@ public final class SHSkins {
         proxy.getEventManager().register(this, new SkinListener(logger, skinService));
         proxy.getCommandManager().register(
             proxy.getCommandManager().metaBuilder("skin").aliases("skins").plugin(this).build(),
-            new SkinCommand(pluginConfig));
+            new SkinCommand(messages));
+        proxy.getCommandManager().register(
+            proxy.getCommandManager().metaBuilder("shskins").plugin(this).build(),
+            new AdminCommand(this, messages));
 
         logger.info("SHSkins a ete active avec succes !");
+    }
+
+    /**
+     * Relit config.yml et messages.yml. Les deux sont lus et valides avant que quoi que ce soit change : en cas
+     * d'erreur la configuration en cours reste en place. Reconstruit le cache memoire des skins avec les reglages
+     * lus (les textures se redemandent a la connexion suivante) et relance la lecture des capes MineSkin pour une
+     * cle changee. Les skins enregistres (playerdata/) ne sont pas touches.
+     */
+    public void reload() throws ConfigException {
+        Runnable applyConfig = pluginConfig.prepareReload();
+        Runnable applyMessages = messages.prepareReload();
+        applyConfig.run();
+        applyMessages.run();
+        skinCache.configure(pluginConfig);
+        capeCatalog.refresh();
+    }
+
+    public Logger getLogger() {
+        return logger;
     }
 
     public PluginConfig getPluginConfig() {

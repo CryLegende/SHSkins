@@ -10,22 +10,24 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
+/**
+ * Valeurs de config.yml. Les champs sont lus a chaque connexion par les services qui gardent cet objet : un
+ * rechargement les remplace sur place.
+ */
 public class PluginConfig {
 
     private final Path dataFolder;
     private final Logger logger;
 
-    private String apiUrl;
-    private String capeApiUrl;
-    private boolean cacheEnabled;
-    private int cacheExpireMinutes;
-    private int cacheMaxSize;
-    private String mineskinApiKey;
-    private String skinCommandMessage;
-    private boolean debug;
-
-    private static final String DEFAULT_SKIN_COMMAND_MESSAGE = "&7&l« &e&lSH &8&l» &7Change ton &eskin &7sur "
-        + "&ehttps://skyhand.fr/skin-api &7: il s'applique automatiquement à tes prochaines connexions.";
+    private volatile String apiUrl;
+    private volatile String capeApiUrl;
+    private volatile boolean cacheEnabled;
+    private volatile int cacheExpireMinutes;
+    private volatile int cacheMaxSize;
+    private volatile String mineskinApiKey;
+    private volatile boolean debug;
+    /** Ancien texte de /skin (commande-skin.message), repris dans messages.yml a la premiere creation. */
+    private volatile String legacySkinCommandMessage;
 
     public PluginConfig(Path dataFolder, Logger logger) {
         this.dataFolder = dataFolder;
@@ -33,7 +35,7 @@ public class PluginConfig {
         loadConfig();
     }
 
-    @SuppressWarnings("unchecked")
+    /** Lecture du demarrage : un config.yml illisible est signale puis les valeurs par defaut servent. */
     public void loadConfig() {
         Path file = dataFolder.resolve("config.yml");
         try {
@@ -50,15 +52,37 @@ public class PluginConfig {
         }
 
         Map<String, Object> root = Map.of();
-        try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
-            Object loaded = new Yaml().load(reader);
-            if (loaded instanceof Map<?, ?> map) {
-                root = (Map<String, Object>) map;
-            }
+        try {
+            root = read(file);
         } catch (Exception e) {
             logger.error("Could not load config.yml", e);
         }
+        apply(root);
+    }
 
+    /**
+     * Lit et valide config.yml sans rien changer ; renvoie l'etape qui applique les valeurs lues. En cas d'erreur
+     * YAML l'exception porte le fichier et l'erreur, et la configuration en cours reste en place.
+     */
+    public Runnable prepareReload() throws ConfigException {
+        Map<String, Object> root;
+        try {
+            root = read(dataFolder.resolve("config.yml"));
+        } catch (Exception e) {
+            throw new ConfigException("config.yml", e);
+        }
+        return () -> apply(root);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> read(Path file) throws Exception {
+        try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+            Object loaded = new Yaml().load(reader);
+            return loaded instanceof Map<?, ?> map ? (Map<String, Object>) map : Map.of();
+        }
+    }
+
+    private void apply(Map<String, Object> root) {
         this.apiUrl = string(root, "api-url", "https://skyhand.fr/api/skin-api/skins/%player%");
         // Vide (ancienne config) : pas de choix de cape, celle du compte Minecraft s'applique
         this.capeApiUrl = string(root, "cape-api-url", "");
@@ -67,7 +91,7 @@ public class PluginConfig {
         this.cacheExpireMinutes = integer(cache, "expire-after-write-minutes", 60);
         this.cacheMaxSize = integer(cache, "maximum-size", 1000);
         this.mineskinApiKey = string(section(root, "mineskin"), "api-key", "");
-        this.skinCommandMessage = string(section(root, "commande-skin"), "message", DEFAULT_SKIN_COMMAND_MESSAGE);
+        this.legacySkinCommandMessage = string(section(root, "commande-skin"), "message", null);
         this.debug = bool(root, "debug", false);
     }
 
@@ -116,11 +140,12 @@ public class PluginConfig {
         return mineskinApiKey;
     }
 
-    public String getSkinCommandMessage() {
-        return skinCommandMessage;
-    }
-
     public boolean isDebug() {
         return debug;
+    }
+
+    /** Ancien texte de /skin lu dans config.yml, ou null : sert seulement a creer messages.yml. */
+    public String getLegacySkinCommandMessage() {
+        return legacySkinCommandMessage;
     }
 }

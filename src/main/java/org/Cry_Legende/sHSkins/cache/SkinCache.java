@@ -22,10 +22,18 @@ public class SkinCache {
 
     private static final int GENERATED_HOURS = 24;
 
-    private final Cache<String, Optional<SkinData>> accounts;
-    private final Cache<String, SkinData> generated;
+    private volatile Cache<String, Optional<SkinData>> accounts;
+    private volatile Cache<String, SkinData> generated;
 
     public SkinCache(PluginConfig config) {
+        configure(config);
+    }
+
+    /**
+     * Reconstruit les deux caches avec les reglages courants (cache.enabled, expire-after-write-minutes,
+     * maximum-size) : les entrees en memoire sont perdues, les textures se redemandent a la connexion suivante.
+     */
+    public final void configure(PluginConfig config) {
         if (config.isCacheEnabled()) {
             this.accounts = Caffeine.newBuilder()
                 .expireAfterWrite(config.getCacheExpireMinutes(), TimeUnit.MINUTES)
@@ -45,22 +53,26 @@ public class SkinCache {
      * @return vide si le compte n'est pas en cache ; sinon les textures du compte (elles-memes vides sans compte)
      */
     public Optional<Optional<SkinData>> getAccount(String playerName) {
-        return accounts == null ? Optional.empty() : Optional.ofNullable(accounts.getIfPresent(key(playerName)));
+        Cache<String, Optional<SkinData>> cache = accounts;
+        return cache == null ? Optional.empty() : Optional.ofNullable(cache.getIfPresent(key(playerName)));
     }
 
     public void putAccount(String playerName, Optional<SkinData> textures) {
-        if (accounts != null) {
-            accounts.put(key(playerName), textures);
+        Cache<String, Optional<SkinData>> cache = accounts;
+        if (cache != null) {
+            cache.put(key(playerName), textures);
         }
     }
 
     public Optional<SkinData> getGenerated(String input) {
-        return generated == null ? Optional.empty() : Optional.ofNullable(generated.getIfPresent(input));
+        Cache<String, SkinData> cache = generated;
+        return cache == null ? Optional.empty() : Optional.ofNullable(cache.getIfPresent(input));
     }
 
     public void putGenerated(String input, SkinData skinData) {
-        if (generated != null) {
-            generated.put(input, skinData);
+        Cache<String, SkinData> cache = generated;
+        if (cache != null) {
+            cache.put(input, skinData);
         }
     }
 

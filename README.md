@@ -28,13 +28,29 @@ Utilisé sur : **Proxy**.
 
 La cape se choisit sur le profil du site (carte « Ma cape », plugin skyhandsite) : celle du compte Minecraft (défaut), aucune, ou une cape officielle. MineSkin ne pose une cape que si la clé y a droit (offre Basic ou plus) : SHSkins relit toutes les heures les capes autorisées (`/v2/me/capes`), et sans offre payante les skins du site restent sans cape.
 
+## Commandes
+
+| Commande | Alias | Description | Permission |
+|---|---|---|---|
+| `/skin` | `/skins` | Renvoie vers la page du site où changer de skin. | aucune |
+| `/shskins reload` | — | Recharge `config.yml` et `messages.yml` ; si un fichier est illisible, la configuration précédente reste active. Vide le cache mémoire des skins et relit les capes MineSkin ; les skins enregistrés (`playerdata/`) ne sont pas touchés. | `shskins.admin.reload` |
+
+## Permissions
+
+| Permission | Description |
+|---|---|
+| `shskins.admin.reload` | `/shskins reload`. |
+
+Sous Velocity, il n'y a pas de permission parente ni de valeur par défaut : seules la console et les joueurs à qui le gestionnaire de permissions du proxy accorde `shskins.admin.reload` ont droit à `/shskins`.
+
 ## Configuration
 
 Fichiers par défaut repris du serveur (secrets remplacés par `CHANGE_ME`). Cliquez sur un fichier pour l'ouvrir :
 
 <pre>
 plugins/shskins/
-└── <a href="src/main/resources/config.yml">config.yml</a>
+├── <a href="src/main/resources/config.yml">config.yml</a>
+└── <a href="src/main/resources/messages.yml">messages.yml</a>
 </pre>
 
 ## Compilation

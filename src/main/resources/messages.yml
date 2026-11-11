@@ -1,0 +1,14 @@
+# Messages de SHSkins, codes couleur &. Un message vide ("") n'est pas envoye.
+#
+# Placeholders :
+#   {commands}   sous-commandes de /shskins que l'expediteur peut utiliser (usage)
+#   {file}       fichier illisible (reload-failed)
+#   {error}      erreur de lecture du fichier (reload-failed)
+
+# /skin : les skins se changent sur le site. Le lien est cliquable.
+skin-command: "&7&l« &e&lSH &8&l» &7Change ton &eskin &7sur &ehttps://skyhand.fr/skin-api &7: il s'applique automatiquement à tes prochaines connexions."
+
+# /shskins
+usage: "&7&l« &e&lSH &8&l» &7Utilisation : &e/shskins <{commands}>&7."
+reloaded: "&7&l« &a&lSH &8&l» &7Configuration &arechargée&7 : cache des skins vidé, capes MineSkin relues."
+reload-failed: "&7&l« &c&lSH &8&l» &7Rechargement &cimpossible&7, &c{file} &7illisible : &c{error}&7. La configuration précédente reste active."

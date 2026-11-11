@@ -1,3 +1,19 @@
+# SHSkins : applique le skin SkyHand d'un joueur à sa connexion (plugin du proxy Velocity).
+# Ordre : le skin envoyé sur le site (skin-api, généré par MineSkin avec la cape choisie sur le profil), sinon le skin
+# du compte Minecraft du même pseudo, sinon le dernier skin enregistré dans playerdata/.
+#
+# Commandes :
+#   /skin (alias /skins)    Renvoie vers la page du site où changer de skin. Ouverte à tous.
+#   /shskins reload         Recharge config.yml et messages.yml ; si un fichier est illisible, la configuration
+#                           précédente reste active. Vide aussi le cache mémoire des skins et relit les capes
+#                           MineSkin. Marche depuis la console.
+#
+# Permissions (évaluées par le gestionnaire de permissions du proxy ; sans lui, seule la console y a droit) :
+#   shskins.admin.reload    /shskins reload. shskins.admin n'est pas une permission parente sous Velocity : il faut
+#                           accorder shskins.admin.reload.
+#
+# Le texte de /skin et les messages de /shskins sont dans messages.yml.
+
 # URL de l'API pour récupérer les skins des joueurs.
 # Utilisez %player% pour le pseudo et %uuid% pour l'UUID du joueur.
 api-url: "http://127.0.0.1/api/skin-api/skins/%player%"
@@ -23,10 +39,6 @@ mineskin:
   # Votre clé d'API MineSkin (peut être laissée vide si vous n'en avez pas).
   # Requis pour générer des skins à partir d'URLs.
   api-key: "CHANGE_ME"
-
-# Commande /skin (alias /skins) : les skins se changent sur le site, elle renvoie juste vers la page.
-commande-skin:
-  message: "&7&l« &e&lSH &8&l» &7Change ton &eskin &7sur &ehttps://skyhand.fr/skin-api &7: il s'applique automatiquement à tes prochaines connexions."
 
 # Activer les messages de débogage dans la console.
 debug: false
