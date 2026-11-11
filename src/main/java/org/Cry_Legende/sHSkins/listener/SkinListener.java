@@ -7,6 +7,7 @@ import com.velocitypowered.api.event.player.GameProfileRequestEvent;
 import com.velocitypowered.api.util.GameProfile;
 import org.Cry_Legende.sHSkins.model.SkinData;
 import org.Cry_Legende.sHSkins.service.SkinService;
+import org.Cry_Legende.sHSkins.storage.SkinStorage;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
@@ -21,10 +22,12 @@ public class SkinListener {
 
     private final Logger logger;
     private final SkinService skinService;
+    private final SkinStorage skinStorage;
 
-    public SkinListener(Logger logger, SkinService skinService) {
+    public SkinListener(Logger logger, SkinService skinService, SkinStorage skinStorage) {
         this.logger = logger;
         this.skinService = skinService;
+        this.skinStorage = skinStorage;
     }
 
     /**
@@ -44,6 +47,11 @@ public class SkinListener {
 
         CompletableFuture<Void> work = skinService.getSkinData(playerName, playerUUID, currentSkin)
             .thenAccept(targetSkinOptional -> {
+                // Skin que le joueur aura sur le reseau : celui choisi, sinon celui du profil (connexion premium).
+                // Enregistre a chaque connexion : c'est lui que les serveurs affichent quand le joueur est hors ligne.
+                Optional<SkinData> applied = targetSkinOptional.or(() -> currentSkin);
+                applied.ifPresent(skin -> skinStorage.saveSkin(playerUUID, playerName, skin));
+
                 if (targetSkinOptional.isEmpty()) {
                     return;
                 }

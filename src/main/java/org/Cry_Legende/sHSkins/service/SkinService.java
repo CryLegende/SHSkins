@@ -8,6 +8,7 @@ import org.Cry_Legende.sHSkins.cache.SkinCache;
 import org.Cry_Legende.sHSkins.config.PluginConfig;
 import org.Cry_Legende.sHSkins.model.CapeChoice;
 import org.Cry_Legende.sHSkins.model.SkinData;
+import org.Cry_Legende.sHSkins.storage.SkinDatabase;
 import org.Cry_Legende.sHSkins.storage.SkinStorage;
 import org.slf4j.Logger;
 
@@ -145,7 +146,6 @@ public class SkinService {
             .thenCompose(cape -> generate(SkinSource.image(png), cape))
             .thenApply(generated -> {
                 if (generated.isPresent()) {
-                    skinStorage.saveSkin(playerUUID, generated.get());
                     return generated;
                 }
                 debug("MineSkin indisponible pour " + playerName + " : dernier skin enregistre.");
@@ -178,12 +178,7 @@ public class SkinService {
                 return completed(skinStorage.getSkin(playerUUID));
             }
             Optional<SkinData> base = account.status() == Status.FOUND ? account.optional() : skinStorage.getSkin(playerUUID);
-            return withCape(base, choice).thenApply(result -> {
-                if (account.status() == Status.FOUND && current.isEmpty()) {
-                    result.ifPresent(skin -> skinStorage.saveSkin(playerUUID, skin));
-                }
-                return result;
-            });
+            return withCape(base, choice);
         });
     }
 
@@ -232,14 +227,14 @@ public class SkinService {
             return completed(cached.get().isPresent() ? Fetched.found(cached.get().get()) : Fetched.absent());
         }
 
-        // Reponse de Mojang deja connue (fichier <uuid>.account.json) : servie tout de suite, sans attendre Mojang
+        // Reponse de Mojang deja connue (table shskins_accounts) : servie tout de suite, sans attendre Mojang
         // pendant la connexion (il repond parfois en 4-5 s), puis relue en arriere-plan pour la connexion suivante.
         // Une absence de compte n'est gardee que 24 h.
-        Optional<SkinStorage.AccountEntry> stored = skinStorage.getAccount(playerUUID);
+        Optional<SkinDatabase.AccountEntry> stored = skinStorage.getAccount(playerUUID);
         if (stored.isPresent() && (stored.get().found()
                 || System.currentTimeMillis() - stored.get().checkedAt() < ACCOUNT_ABSENT_TTL_MS)) {
             Optional<SkinData> skin = stored.get().skin();
-            debug("Compte Mojang de " + playerName + " lu dans son fichier (" + (skin.isPresent() ? "textures" : "pas de compte")
+            debug("Compte Mojang de " + playerName + " lu en base (" + (skin.isPresent() ? "textures" : "pas de compte")
                 + "), relu en arriere-plan.");
             skinCache.putAccount(playerName, skin);
             if (accountRefreshes.add(playerUUID)) {
@@ -251,7 +246,7 @@ public class SkinService {
     }
 
     /**
-     * Interroge Mojang ; une reponse (compte ou absence de compte) remplit le cache memoire et le fichier du joueur.
+     * Interroge Mojang ; une reponse (compte ou absence de compte) remplit le cache memoire et la base.
      */
     private CompletableFuture<Fetched<SkinData>> fetchAccount(String playerName, UUID playerUUID) {
         // Le reseau tourne en UUID offline (version 3) : sauf UUID Mojang reel, il faut d'abord retrouver celui du pseudo
@@ -268,7 +263,7 @@ public class SkinService {
             .thenApply(result -> {
                 if (result.status() != Status.ERROR) {
                     skinCache.putAccount(playerName, result.optional());
-                    // Un pseudo hors format n'a pas interroge Mojang : rien a retenir sur disque pour lui
+                    // Un pseudo hors format n'a pas interroge Mojang : rien a retenir en base pour lui
                     if (MOJANG_NAME.matcher(playerName).matches()) {
                         skinStorage.saveAccount(playerUUID, result.optional());
                     }

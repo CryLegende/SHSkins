@@ -1,12 +1,15 @@
 # SHSkins : applique le skin SkyHand d'un joueur à sa connexion (plugin du proxy Velocity).
 # Ordre : le skin envoyé sur le site (skin-api, généré par MineSkin avec la cape choisie sur le profil), sinon le skin
-# du compte Minecraft du même pseudo, sinon le dernier skin enregistré dans playerdata/.
+# du compte Minecraft du même pseudo, sinon le dernier skin enregistré.
+#
+# Le skin appliqué est enregistré à chaque connexion dans MariaDB (table shskins_skins) : SHSkins sur les serveurs
+# Paper le lit pour afficher les têtes, PNJ et menus des joueurs hors ligne. Le même jar sert aux deux.
 #
 # Commandes :
 #   /skin (alias /skins)    Renvoie vers la page du site où changer de skin. Ouverte à tous.
 #   /shskins reload         Recharge config.yml et messages.yml ; si un fichier est illisible, la configuration
 #                           précédente reste active. Vide aussi le cache mémoire des skins et relit les capes
-#                           MineSkin. Marche depuis la console.
+#                           MineSkin. base-de-donnees demande un redémarrage. Marche depuis la console.
 #
 # Permissions (évaluées par le gestionnaire de permissions du proxy ; sans lui, seule la console y a droit) :
 #   shskins.admin.reload    /shskins reload. shskins.admin n'est pas une permission parente sous Velocity : il faut
@@ -39,6 +42,13 @@ mineskin:
   # Votre clé d'API MineSkin (peut être laissée vide si vous n'en avez pas).
   # Requis pour générer des skins à partir d'URLs.
   api-key: "CHANGE_ME"
+
+# Base MariaDB : skin appliqué à chaque joueur et dernière réponse de Mojang pour son pseudo (schema.sql du dépôt).
+# Changer ces valeurs demande un redémarrage du proxy.
+base-de-donnees:
+  url: "jdbc:mariadb://127.0.0.1:3306/Global"
+  utilisateur: "shskins"
+  mot-de-passe: "CHANGE_ME"
 
 # Activer les messages de débogage dans la console.
 debug: false

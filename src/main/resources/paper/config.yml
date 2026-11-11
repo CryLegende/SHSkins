@@ -1,0 +1,37 @@
+# SHSkins (serveurs Paper) : donne le skin de n'importe quel joueur SkyHand, connecté ou non, aux autres plugins.
+# Le proxy (SHSkins Velocity) enregistre dans MariaDB le skin appliqué à chaque connexion ; ce plugin lit toute la
+# table au démarrage puis relit les skins modifiés toutes les « rafraichissement-secondes ». Les recherches se font
+# en mémoire, sans attendre la base.
+#
+# Utilisation :
+#   Plugins SkyHand    org.Cry_Legende.sHSkins.api.SHSkinsAPI : createHead, applyHead, createProfile, getSkin.
+#   Placeholders       %shskins_texture_<pseudo>%  textures du skin en base64 (format de « basehead- » dans DeluxeMenus)
+#                      %shskins_url_<pseudo>%      adresse de l'image du skin
+#                      %shskins_texture%, %shskins_url% : le joueur qui regarde.
+#                      Le pseudo peut venir d'un autre placeholder entre accolades :
+#                      material: 'basehead-%shskins_texture_{ajlb_lb_vault_eco_balance_fixed_1_alltime_name}%'
+#
+# Commandes (depuis la console du serveur ; en jeu, /shskins est celle du proxy) :
+#   /shskins info <pseudo>   Skin connu pour ce joueur : adresse de l'image et date où le proxy l'a appliqué.
+#   /shskins reload          Recharge config.yml et messages.yml ; si un fichier est illisible, la configuration
+#                            précédente reste active. base-de-donnees demande un redémarrage du serveur.
+#
+# Permissions :
+#   shskins.admin            Toutes les commandes ci-dessous (op par défaut).
+#   shskins.admin.info       /shskins info
+#   shskins.admin.reload     /shskins reload
+#
+# Les messages des commandes sont dans messages.yml.
+
+# Base MariaDB où le proxy enregistre les skins (la même que dans la config du proxy). Lecture seule ici.
+base-de-donnees:
+  url: "jdbc:mariadb://127.0.0.1:3306/Global"
+  utilisateur: "shskins"
+  mot-de-passe: "CHANGE_ME"
+
+# Secondes entre deux relectures des skins modifiés en base (minimum 5).
+rafraichissement-secondes: 30
+
+placeholders:
+  # Texte rendu quand le skin du joueur n'est pas connu. Vide : la tête DeluxeMenus garde le skin par défaut.
+  inconnu: ""

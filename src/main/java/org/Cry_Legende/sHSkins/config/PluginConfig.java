@@ -1,5 +1,6 @@
 package org.Cry_Legende.sHSkins.config;
 
+import org.Cry_Legende.sHSkins.storage.SkinDatabase;
 import org.slf4j.Logger;
 import org.yaml.snakeyaml.Yaml;
 
@@ -26,6 +27,8 @@ public class PluginConfig {
     private volatile int cacheMaxSize;
     private volatile String mineskinApiKey;
     private volatile boolean debug;
+    /** Lue au demarrage seulement : changer la base demande un redemarrage du proxy. */
+    private volatile SkinDatabase.Settings database;
     /** Ancien texte de /skin (commande-skin.message), repris dans messages.yml a la premiere creation. */
     private volatile String legacySkinCommandMessage;
 
@@ -93,6 +96,11 @@ public class PluginConfig {
         this.mineskinApiKey = string(section(root, "mineskin"), "api-key", "");
         this.legacySkinCommandMessage = string(section(root, "commande-skin"), "message", null);
         this.debug = bool(root, "debug", false);
+        Map<String, Object> db = section(root, "base-de-donnees");
+        this.database = new SkinDatabase.Settings(
+            string(db, "url", "jdbc:mariadb://127.0.0.1:3306/Global"),
+            string(db, "utilisateur", "shskins"),
+            string(db, "mot-de-passe", ""));
     }
 
     @SuppressWarnings("unchecked")
@@ -142,6 +150,10 @@ public class PluginConfig {
 
     public boolean isDebug() {
         return debug;
+    }
+
+    public SkinDatabase.Settings getDatabase() {
+        return database;
     }
 
     /** Ancien texte de /skin lu dans config.yml, ou null : sert seulement a creer messages.yml. */

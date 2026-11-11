@@ -40,8 +40,16 @@ public final class Messages {
      * y en a un) puis le lit. Un fichier illisible est signale et les textes du jar servent.
      */
     public Messages(Path dataFolder, Logger logger, String legacySkinCommand) {
+        this(dataFolder, logger, RESOURCE, legacySkinCommand);
+    }
+
+    /**
+     * @param jarResource fichier du jar qui sert de modele et de textes par defaut (le proxy et les serveurs Paper
+     *                    n'ont pas les memes messages)
+     */
+    public Messages(Path dataFolder, Logger logger, String jarResource, String legacySkinCommand) {
         this.file = dataFolder.resolve(RESOURCE);
-        String jar = jarText();
+        String jar = jarText(jarResource);
         this.defaults = flatten(parse(jar));
         if (!Files.exists(file)) {
             try {
@@ -120,8 +128,8 @@ public final class Messages {
         return out;
     }
 
-    private static String jarText() {
-        try (InputStream in = Messages.class.getClassLoader().getResourceAsStream(RESOURCE)) {
+    private static String jarText(String resource) {
+        try (InputStream in = Messages.class.getClassLoader().getResourceAsStream(resource)) {
             return in == null ? "" : new String(in.readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
             return "";

@@ -1,0 +1,18 @@
+# Messages de SHSkins (serveurs Paper), codes couleur &. Un message vide ("") n'est pas envoyé.
+#
+# Placeholders :
+#   {commands}   sous-commandes de /shskins que l'expéditeur peut utiliser (usage)
+#   {file}       fichier illisible (reload-failed)
+#   {error}      erreur de lecture du fichier (reload-failed)
+#   {count}      nombre de skins connus (reloaded)
+#   {player}     pseudo demandé (info-known, info-unknown)
+#   {url}        adresse de l'image du skin (info-known)
+#   {date}       date où le proxy a appliqué ce skin (info-known)
+
+usage: "&7&l« &e&lSH &8&l» &7Utilisation : &e/shskins <{commands}>&7."
+reloaded: "&7&l« &a&lSH &8&l» &7Configuration &arechargée&7 : &a{count} &7skins connus."
+reloaded-database: "&7&l« &6&lSH &8&l» &7La section &6base-de-donnees &7a changé : elle s'applique au prochain redémarrage du serveur."
+reload-failed: "&7&l« &c&lSH &8&l» &7Rechargement &cimpossible&7, &c{file} &7illisible : &c{error}&7. La configuration précédente reste active."
+info-usage: "&7&l« &e&lSH &8&l» &7Utilisation : &e/shskins info <pseudo>&7."
+info-known: "&7&l« &e&lSH &8&l» &7Skin de &e{player}&7, appliqué le &e{date}&7 : &e{url}"
+info-unknown: "&7&l« &6&lSH &8&l» &7Aucun skin connu pour &6{player}&7 : sa tête garde le skin par défaut."

@@ -1,0 +1,28 @@
+name: SHSkins
+version: '${project.version}'
+main: org.Cry_Legende.sHSkins.paper.SHSkinsPaper
+api-version: '1.20'
+author: Cry_Legende
+description: Skins des joueurs hors ligne pour les autres plugins (API et placeholders)
+folia-supported: false
+softdepend:
+  - PlaceholderAPI
+
+commands:
+  shskins:
+    description: Administration de SHSkins
+    usage: /shskins <info|reload>
+
+permissions:
+  shskins.admin:
+    description: Toute l'administration de SHSkins
+    default: op
+    children:
+      shskins.admin.info: true
+      shskins.admin.reload: true
+  shskins.admin.info:
+    description: /shskins info <pseudo>, le skin connu d'un joueur
+    default: op
+  shskins.admin.reload:
+    description: Recharger config.yml et messages.yml
+    default: op
