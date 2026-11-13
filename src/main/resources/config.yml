@@ -19,14 +19,14 @@
 
 # URL de l'API pour récupérer les skins des joueurs.
 # Utilisez %player% pour le pseudo et %uuid% pour l'UUID du joueur.
-api-url: "http://127.0.0.1/api/skin-api/skins/%player%"
+api-url: "https://example.com/api/skin-api/skins/%player%"
 
 # URL du choix de cape fait sur le site (carte « Ma cape » du profil), même syntaxe que api-url.
 # Réponse JSON {"cape": "auto"} : "auto" = la cape du compte Minecraft du même pseudo, "none" = aucune,
 # sinon l'UUID d'une cape MineSkin (https://api.mineskin.org/v2/capes). Vide : toujours "auto".
 # MineSkin ne pose une cape sur un skin du site qu'avec une offre payante (Basic et au-dessus) :
 # avec une clé gratuite, seuls les joueurs sans skin du site gardent la cape de leur compte.
-cape-api-url: "http://127.0.0.1/api/skyhandsite/cape/%player%"
+cape-api-url: "https://example.com/api/cape/%player%"
 
 # Configuration du cache pour les skins
 cache:
@@ -46,7 +46,7 @@ mineskin:
 # Base MariaDB : skin appliqué à chaque joueur et dernière réponse de Mojang pour son pseudo (schema.sql du dépôt).
 # Changer ces valeurs demande un redémarrage du proxy.
 base-de-donnees:
-  url: "jdbc:mariadb://127.0.0.1:3306/Global"
+  url: "jdbc:mariadb://127.0.0.1:3306/minecraft"
   utilisateur: "shskins"
   mot-de-passe: "CHANGE_ME"
 

@@ -25,7 +25,7 @@
 
 # Base MariaDB où le proxy enregistre les skins (la même que dans la config du proxy). Lecture seule ici.
 base-de-donnees:
-  url: "jdbc:mariadb://127.0.0.1:3306/Global"
+  url: "jdbc:mariadb://127.0.0.1:3306/minecraft"
   utilisateur: "shskins"
   mot-de-passe: "CHANGE_ME"
 

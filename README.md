@@ -94,7 +94,7 @@ Sous Velocity, il n'y a pas de permission parente ni de valeur par défaut : seu
 
 ## Base de données
 
-Tables dans `Global` (`bo_Global` sur backopale) : [`schema.sql`](schema.sql). L'utilisateur MariaDB `shskins` n'a que `SELECT, INSERT, UPDATE` sur `shskins_skins` et `shskins_accounts`. Les serveurs ne font que lire.
+Tables dans la base de `base-de-donnees.url` : [`schema.sql`](schema.sql). L'utilisateur MariaDB `shskins` n'a que `SELECT, INSERT, UPDATE` sur `shskins_skins` et `shskins_accounts`. Les serveurs ne font que lire.
 
 ## Configuration
 
