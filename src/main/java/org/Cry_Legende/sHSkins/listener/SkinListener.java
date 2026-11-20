@@ -58,12 +58,10 @@ public class SkinListener {
                 SkinData targetSkin = targetSkinOptional.get();
 
                 if (currentSkin.isPresent() && currentSkin.get().equals(targetSkin)) {
-                    logger.info("Le joueur {} a deja le bon skin.", playerName);
                     return;
                 }
 
                 event.setGameProfile(withTextures(event.getGameProfile(), targetSkin));
-                logger.info("Profil de connexion defini avec succes pour {}.", playerName);
             })
             .exceptionally(throwable -> {
                 logger.error("Erreur asynchrone lors du processus de skin pour " + playerName, throwable);

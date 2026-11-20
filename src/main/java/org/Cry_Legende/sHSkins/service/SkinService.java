@@ -409,7 +409,15 @@ public class SkinService {
                 return new Generation(null, false);
             })
             .exceptionally(exception -> {
-                logger.error("Impossible de contacter l'API MineSkin v2", exception);
+                // Délai dépassé ou coupure : une ligne suffit, la trace complète ne sert que pour une autre erreur
+                Throwable cause = exception instanceof java.util.concurrent.CompletionException && exception.getCause() != null
+                    ? exception.getCause() : exception;
+                if (cause instanceof java.net.http.HttpTimeoutException || cause instanceof java.net.ConnectException
+                        || cause instanceof java.io.IOException) {
+                    logger.warn("L'API MineSkin v2 n'a pas répondu ({}) : skin non généré.", cause.getClass().getSimpleName());
+                } else {
+                    logger.error("Impossible de contacter l'API MineSkin v2", exception);
+                }
                 return new Generation(null, false);
             });
     }

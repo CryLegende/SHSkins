@@ -56,16 +56,13 @@ public final class SHSkins {
 
     @Subscribe
     public void onProxyInitialize(ProxyInitializeEvent event) {
-        logger.info("Demarrage de SHSkins...");
 
         this.pluginConfig = new PluginConfig(dataFolder, logger);
         // messages.yml est cree au premier demarrage, avec le texte de /skin de l'ancien config.yml
         this.messages = new Messages(dataFolder, logger, pluginConfig.getLegacySkinCommandMessage());
         this.skinCache = new SkinCache(pluginConfig);
         SkinDatabase database = new SkinDatabase(pluginConfig.getDatabase(), logger);
-        if (database.check()) {
-            logger.info("Connecte a MariaDB : les skins appliques y sont enregistres.");
-        }
+        database.check();
         this.skinStorage = new SkinStorage(database, logger);
         // Versions 2.x : un fichier par joueur dans playerdata/, repris une fois dans la base
         skinStorage.importLegacyFiles(dataFolder);
@@ -89,7 +86,6 @@ public final class SHSkins {
             proxy.getCommandManager().metaBuilder("shskins").plugin(this).build(),
             new AdminCommand(this, messages));
 
-        logger.info("SHSkins a ete active avec succes !");
     }
 
     /**
