@@ -51,9 +51,18 @@ Les têtes faites par SHSkins portent les textures du skin : le client les affic
 | `applyHead(SkullMeta, UUID, String)` | pose le skin sur une tête existante (nom et lore gardés) |
 | `createProfile(UUID, String)` | profil avec les textures (PNJ, bloc de tête) |
 | `getSkin(UUID)`, `getSkin(String)`, `getSkin(OfflinePlayer)` | textures (`SkinData` : valeur, signature, `skinUrl()`) |
+| `getPieces(SkinData)`, `makePieces(SkinData, PiecePriority)` | morceaux d'un skin, pour une statue articulée (voir plus bas) |
 | `isReady()` | SHSkins actif et skins lus depuis la base |
 
 Le plugin qui s'en sert déclare `softdepend: [SHSkins]` (ou `depend`) et, en `softdepend`, vérifie `Bukkit.getPluginManager().isPluginEnabled("SHSkins")` avant d'appeler l'API. Dépendance Maven : le jar installé dans le dépôt local (`mvn install`), en `provided`.
+
+### Morceaux de skins (statues articulées)
+
+Le client n'affiche d'une tête que la zone « tête » d'un skin : pour montrer un buste, un bras ou une jambe qui bouge, chaque morceau doit être la tête d'un skin à lui. SHSkins découpe le skin **d'origine** au pixel près (`SkinPart`, dix morceaux), dépose chaque morceau une seule fois et garde son empreinte dans `shskins_pieces`, pour tous les serveurs. Deux morceaux identiques ne font qu'un dépôt.
+
+Un skin n'est découpé que si un plugin le demande (`makePieces`), dans l'ordre de `PiecePriority` : `URGENT` (une statue va se montrer), `NORMAL`, `LATER` (pourrait servir, seulement si le compte est libre). Le nombre de joueurs connectés n'y change rien.
+
+Les dépôts se font par un **compte Mojang** (`/shskins compte connecter`, un code à taper sur microsoft.com/link) : 16 par minute, avec une pause de plus en plus longue après un refus, car Mojang suspend 24 h un compte qui insiste. Son skin change à chaque dépôt : un compte qui ne sert à rien d'autre. Son jeton est dans `compte-mojang.json`, lisible par le serveur seul, jamais dans un dépôt. Sans compte, ou pendant ses pauses, **MineSkin** prend le relais (100 dépôts par heure pour l'adresse du serveur, skins du site compris ; `morceaux.mineskin.reserve` leur en garde toujours).
 
 ### Placeholders (menus et plugins tiers)
 

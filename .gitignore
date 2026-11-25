@@ -11,3 +11,4 @@ out/
 # Sauvegardes locales
 backup-*/
 *.bak
+compte-mojang.json

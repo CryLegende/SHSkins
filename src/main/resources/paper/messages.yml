@@ -8,6 +8,9 @@
 #   {player}     pseudo demandé (info-known, info-unknown)
 #   {url}        adresse de l'image du skin (info-known)
 #   {date}       date où le proxy a appliqué ce skin (info-known)
+#   {ready}      skins dont les morceaux sont faits, {waiting} en cours, {left} et {mineskin} dépôts permis (pieces)
+#   {code}       code à taper sur la page {url}, valable {minutes} minutes (account-code)
+#   {account}    nom du compte Mojang (account-connected, account-ready, account-paused)
 
 usage: "&7&l« &e&lSH &8&l» &7Utilisation : &e/shskins <{commands}>&7."
 reloaded: "&7&l« &a&lSH &8&l» &7Configuration &arechargée&7 : &a{count} &7skins connus."
@@ -16,3 +19,11 @@ reload-failed: "&7&l« &c&lSH &8&l» &7Rechargement &cimpossible&7, &c{file} &7i
 info-usage: "&7&l« &e&lSH &8&l» &7Utilisation : &e/shskins info <pseudo>&7."
 info-known: "&7&l« &e&lSH &8&l» &7Skin de &e{player}&7, appliqué le &e{date}&7 : &e{url}"
 info-unknown: "&7&l« &6&lSH &8&l» &7Aucun skin connu pour &6{player}&7 : sa tête garde le skin par défaut."
+pieces: "&7&l« &e&lSH &8&l» &7Morceaux de skins : &e{ready} &7faits, &e{waiting} &7en cours. Dépôts : &e{left} &7cette minute (compte Mojang), &e{mineskin} &7cette heure (MineSkin)."
+account-none: "&7&l« &e&lSH &8&l» &7Aucun compte Mojang connecté &e[/shskins compte connecter]&7."
+account-code: "&7&l« &e&lSH &8&l» &7Ouvrez &e{url} &7et tapez &e{code} &7({minutes} min), avec le compte à connecter."
+account-connected: "&7&l« &a&lSH &8&l» &7Compte &a{account} &7connecté, il dépose les morceaux de skins."
+account-failed: "&7&l« &c&lSH &8&l» &7Compte Mojang : &c{error}&7."
+account-removed: "&7&l« &a&lSH &8&l» &7Compte Mojang retiré."
+account-ready: "&7&l« &e&lSH &8&l» &7Compte Mojang &e{account}&7, encore &e{left} &7dépôts cette minute."
+account-paused: "&7&l« &6&lSH &8&l» &7Compte Mojang &6{account} &7en pause pour &6{minutes} &7min après un refus."

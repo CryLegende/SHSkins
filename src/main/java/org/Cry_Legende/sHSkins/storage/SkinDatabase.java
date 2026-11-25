@@ -19,7 +19,8 @@ import java.util.UUID;
  * Stockage MariaDB des skins, commun au proxy et aux serveurs Paper. Tables (schema.sql du depot) :
  * <ul>
  *     <li>{@code shskins_skins} : le skin que le proxy a applique a la derniere connexion de chaque joueur ;</li>
- *     <li>{@code shskins_accounts} : la derniere reponse de Mojang pour le compte du meme pseudo (proxy seulement).</li>
+ *     <li>{@code shskins_accounts} : la derniere reponse de Mojang pour le compte du meme pseudo (proxy seulement) ;</li>
+ *     <li>{@code shskins_pieces} : les morceaux de skins deja faits (serveurs Paper seulement).</li>
  * </ul>
  * Une seule connexion, rouverte apres une erreur. Les appels sont bloquants : a faire hors du thread principal.
  */
@@ -50,6 +51,16 @@ public final class SkinDatabase implements AutoCloseable {
         public Optional<SkinData> skin() {
             return found && value != null ? Optional.of(new SkinData(value, signature)) : Optional.empty();
         }
+    }
+
+    /**
+     * Ligne de {@code shskins_pieces}.
+     *
+     * @param skin    empreinte du skin, suivie de -slim pour des bras fins
+     * @param part    nom du morceau
+     * @param texture empreinte de la texture du morceau
+     */
+    public record StoredPiece(String skin, String part, String texture) {
     }
 
     // Le skin le plus recent gagne : un import d'anciens fichiers n'ecrase jamais un skin applique depuis.
@@ -173,6 +184,37 @@ public final class SkinDatabase implements AutoCloseable {
                 ps.setString(3, entry.value());
                 ps.setString(4, entry.signature());
                 ps.setLong(5, entry.checkedAt());
+                ps.executeUpdate();
+            }
+            return null;
+        });
+    }
+
+    /** Morceaux faits a partir de {@code since} (millisecondes), tous avec 0. */
+    public synchronized List<StoredPiece> piecesMadeSince(long since) throws SQLException {
+        return withRetry(c -> {
+            try (PreparedStatement ps = c.prepareStatement("SELECT skin, part, texture FROM shskins_pieces WHERE made_at >= ?")) {
+                ps.setLong(1, since);
+                try (ResultSet rs = ps.executeQuery()) {
+                    List<StoredPiece> out = new ArrayList<>();
+                    while (rs.next()) {
+                        out.add(new StoredPiece(rs.getString(1), rs.getString(2), rs.getString(3)));
+                    }
+                    return out;
+                }
+            }
+        });
+    }
+
+    /** Enregistre un morceau de skin. */
+    public synchronized void savePiece(String skin, String part, String texture) throws SQLException {
+        withRetry(c -> {
+            try (PreparedStatement ps = c.prepareStatement("INSERT INTO shskins_pieces (skin, part, texture, made_at)"
+                + " VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE texture = VALUES(texture), made_at = VALUES(made_at)")) {
+                ps.setString(1, skin);
+                ps.setString(2, part);
+                ps.setString(3, texture);
+                ps.setLong(4, System.currentTimeMillis());
                 ps.executeUpdate();
             }
             return null;

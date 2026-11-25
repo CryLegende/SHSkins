@@ -4,7 +4,8 @@
 # en mémoire, sans attendre la base.
 #
 # Utilisation :
-#   Plugins SkyHand    org.Cry_Legende.sHSkins.api.SHSkinsAPI : createHead, applyHead, createProfile, getSkin.
+#   Plugins SkyHand    org.Cry_Legende.sHSkins.api.SHSkinsAPI : createHead, applyHead, createProfile, getSkin,
+#                      getPieces, makePieces (morceaux d'un skin, pour une statue articulée).
 #   Placeholders       %shskins_texture_<pseudo>%  textures du skin en base64 (format de « basehead- » dans DeluxeMenus)
 #                      %shskins_url_<pseudo>%      adresse de l'image du skin
 #                      %shskins_texture%, %shskins_url% : le joueur qui regarde.
@@ -13,17 +14,21 @@
 #
 # Commandes (depuis la console du serveur ; en jeu, /shskins est celle du proxy) :
 #   /shskins info <pseudo>   Skin connu pour ce joueur : adresse de l'image et date où le proxy l'a appliqué.
+#   /shskins morceaux        Morceaux de skins faits, en cours, et dépôts encore permis.
+#   /shskins compte          Compte Mojang qui dépose les morceaux : connecter, deconnecter, ou son état.
 #   /shskins reload          Recharge config.yml et messages.yml ; si un fichier est illisible, la configuration
 #                            précédente reste active. base-de-donnees demande un redémarrage du serveur.
 #
 # Permissions :
 #   shskins.admin            Toutes les commandes ci-dessous (op par défaut).
-#   shskins.admin.info       /shskins info
+#   shskins.admin.info       /shskins info, /shskins morceaux
+#   shskins.admin.compte     /shskins compte
 #   shskins.admin.reload     /shskins reload
 #
 # Les messages des commandes sont dans messages.yml.
 
-# Base MariaDB où le proxy enregistre les skins (la même que dans la config du proxy). Lecture seule ici.
+# Base MariaDB où le proxy enregistre les skins (la même que dans la config du proxy). Lecture seule ici, sauf les
+# morceaux de skins.
 base-de-donnees:
   url: "jdbc:mariadb://127.0.0.1:3306/minecraft"
   utilisateur: "shskins"
@@ -35,3 +40,25 @@ rafraichissement-secondes: 30
 placeholders:
   # Texte rendu quand le skin du joueur n'est pas connu. Vide : la tête DeluxeMenus garde le skin par défaut.
   inconnu: ""
+
+# Morceaux de skins, pour les statues articulées d'autres plugins (podium des évènements). Un skin est découpé en dix morceaux,
+# déposés une seule fois, et seulement quand un plugin le demande.
+morceaux:
+  # false : ce serveur se sert des morceaux déjà faits, sans en faire.
+  actif: false
+  # Compte Minecraft qui les dépose : chaque dépôt change son skin, donc un compte qui ne sert à rien d'autre. Il se connecte une
+  # fois, avec « /shskins compte connecter » en console, puis un code à taper sur microsoft.com/link. Son jeton est gardé dans
+  # compte-mojang.json : ne jamais le copier ailleurs ni le partager.
+  compte-mojang:
+    # Application Microsoft de la connexion : l'identifiant public du launcher Minecraft, ou celui d'une application Azure à vous
+    # (il faut d'abord la faire accepter par Mojang, aka.ms/mce-reviewappid).
+    application: "00000000402b5328"
+    # Dépôts par minute, 20 au plus. Trop de refus suspendraient le compte : après un refus, pause de 2 min, doublée à chaque fois.
+    par-minute: 16
+  # Sans compte connecté, ou pendant ses pauses. MineSkin gratuit : 100 dépôts par heure pour l'adresse du serveur, skins du site
+  # compris. Vide : pas de MineSkin.
+  mineskin:
+    cle: ""
+    # Dépôts de l'heure toujours laissés aux skins du site, et à garder quand la demande n'est pas urgente.
+    reserve: 20
+    reserve-non-urgent: 50

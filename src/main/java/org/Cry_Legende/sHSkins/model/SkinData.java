@@ -33,10 +33,35 @@ public record SkinData(String value, String signature) {
         return textureUrl("SKIN");
     }
 
+    /**
+     * Empreinte de la texture du skin (fin de son URL textures.minecraft.net).
+     */
+    public Optional<String> skinHash() {
+        return skinUrl().map(url -> url.substring(url.lastIndexOf(TEXTURE_PATH) + TEXTURE_PATH.length()))
+            .filter(hash -> hash.matches("[0-9a-f]{20,}"));
+    }
+
+    /**
+     * Le skin a les bras fins.
+     */
+    public boolean slim() {
+        try {
+            JsonObject skin = textures().getAsJsonObject("SKIN");
+            JsonObject metadata = skin == null ? null : skin.getAsJsonObject("metadata");
+            return metadata != null && metadata.has("model") && metadata.get("model").getAsString().equals("slim");
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    private JsonObject textures() {
+        String json = new String(Base64.getDecoder().decode(value), StandardCharsets.UTF_8);
+        return JsonParser.parseString(json).getAsJsonObject().getAsJsonObject("textures");
+    }
+
     private Optional<String> textureUrl(String type) {
         try {
-            String json = new String(Base64.getDecoder().decode(value), StandardCharsets.UTF_8);
-            JsonObject textures = JsonParser.parseString(json).getAsJsonObject().getAsJsonObject("textures");
+            JsonObject textures = textures();
             if (textures == null || !textures.has(type)) {
                 return Optional.empty();
             }

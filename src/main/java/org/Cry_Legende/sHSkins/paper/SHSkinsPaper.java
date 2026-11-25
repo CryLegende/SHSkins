@@ -4,6 +4,7 @@ import com.destroystokyo.paper.profile.ProfileProperty;
 import org.Cry_Legende.sHSkins.config.ConfigException;
 import org.Cry_Legende.sHSkins.config.Messages;
 import org.Cry_Legende.sHSkins.model.SkinData;
+import org.Cry_Legende.sHSkins.service.MojangAccount;
 import org.Cry_Legende.sHSkins.storage.SkinDatabase;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -19,6 +20,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.text.SimpleDateFormat;
@@ -37,6 +39,7 @@ public final class SHSkinsPaper extends JavaPlugin implements Listener, TabExecu
     private static final String TEXTURES = "textures";
     private static final String PERMISSION_RELOAD = "shskins.admin.reload";
     private static final String PERMISSION_INFO = "shskins.admin.info";
+    private static final String PERMISSION_ACCOUNT = "shskins.admin.compte";
 
     private static volatile SHSkinsPaper instance;
 
@@ -44,6 +47,7 @@ public final class SHSkinsPaper extends JavaPlugin implements Listener, TabExecu
     private Messages messages;
     private SkinDatabase database;
     private SkinRegistry registry;
+    private PieceService pieces;
     private BukkitTask refreshTask;
     private SkinPlaceholders placeholders;
 
@@ -67,6 +71,7 @@ public final class SHSkinsPaper extends JavaPlugin implements Listener, TabExecu
 
         database = new SkinDatabase(settings.database(), getSLF4JLogger());
         registry = new SkinRegistry(database, getSLF4JLogger());
+        pieces = new PieceService(database, settings.pieces(), getDataFolder().toPath(), getSLF4JLogger());
         instance = this;
         // Joueurs deja la (chargement a chaud) : leur skin est connu avant meme la lecture de la base
         Bukkit.getOnlinePlayers().forEach(this::remember);
@@ -93,6 +98,9 @@ public final class SHSkinsPaper extends JavaPlugin implements Listener, TabExecu
         if (placeholders != null) {
             placeholders.unregister();
         }
+        if (pieces != null) {
+            pieces.close();
+        }
         if (database != null) {
             database.close();
         }
@@ -100,6 +108,10 @@ public final class SHSkinsPaper extends JavaPlugin implements Listener, TabExecu
 
     public SkinRegistry registry() {
         return registry;
+    }
+
+    public PieceService pieces() {
+        return pieces;
     }
 
     public PaperSettings settings() {
@@ -126,7 +138,10 @@ public final class SHSkinsPaper extends JavaPlugin implements Listener, TabExecu
             refreshTask.cancel();
         }
         long period = settings.refreshSeconds() * 20L;
-        refreshTask = Bukkit.getScheduler().runTaskTimerAsynchronously(this, registry::refresh, 0L, period);
+        refreshTask = Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
+            registry.refresh();
+            pieces.refresh();
+        }, 0L, period);
     }
 
     // ---------------------------------------------------------------- /shskins
@@ -138,6 +153,11 @@ public final class SHSkinsPaper extends JavaPlugin implements Listener, TabExecu
             reload(sender);
         } else if (sub.equals("info") && sender.hasPermission(PERMISSION_INFO)) {
             info(sender, args);
+        } else if (sub.equals("morceaux") && sender.hasPermission(PERMISSION_INFO)) {
+            send(sender, "pieces", "ready", String.valueOf(pieces.ready()), "waiting", String.valueOf(pieces.waiting()),
+                "left", String.valueOf(pieces.account().left()), "mineskin", String.valueOf(pieces.mineSkinLeft()));
+        } else if (sub.equals("compte") && sender.hasPermission(PERMISSION_ACCOUNT)) {
+            account(sender, args.length < 2 ? "" : args[1].toLowerCase(Locale.ROOT));
         } else {
             send(sender, "usage", "commands", String.join("|", allowedSubcommands(sender)));
         }
@@ -162,12 +182,53 @@ public final class SHSkinsPaper extends JavaPlugin implements Listener, TabExecu
         }
         boolean databaseChanged = !loaded.database().equals(settings.database());
         // La connexion ouverte garde ses reglages jusqu'au redemarrage
-        settings = new PaperSettings(settings.database(), loaded.refreshSeconds(), loaded.unknown());
+        settings = new PaperSettings(settings.database(), loaded.refreshSeconds(), loaded.unknown(), loaded.pieces());
+        pieces.configure(loaded.pieces());
         applyMessages.run();
         scheduleRefresh();
         send(sender, "reloaded", "count", String.valueOf(registry.size()));
         if (databaseChanged) {
             send(sender, "reloaded-database");
+        }
+    }
+
+    /** Compte Mojang qui depose les morceaux : son etat, le connecter, le retirer. */
+    private void account(CommandSender sender, String action) {
+        MojangAccount account = pieces.account();
+        switch (action) {
+            case "connecter" -> account.connect(login -> answer(sender, "account-code", "code", login.code(), "url", login.url(),
+                "minutes", String.valueOf(login.minutes()))).whenComplete((name, error) -> {
+                    if (error == null) {
+                        answer(sender, "account-connected", "account", name);
+                        pieces.wake();
+                    } else {
+                        answer(sender, "account-failed", "error", String.valueOf(error.getMessage()));
+                    }
+                });
+            case "deconnecter" -> {
+                try {
+                    account.disconnect();
+                    send(sender, "account-removed");
+                } catch (IOException e) {
+                    send(sender, "account-failed", "error", String.valueOf(e.getMessage()));
+                }
+            }
+            default -> {
+                if (account.name() == null) {
+                    send(sender, "account-none");
+                } else if (account.pausedMinutes() > 0) {
+                    send(sender, "account-paused", "account", account.name(), "minutes", String.valueOf(account.pausedMinutes()));
+                } else {
+                    send(sender, "account-ready", "account", account.name(), "left", String.valueOf(account.left()));
+                }
+            }
+        }
+    }
+
+    /** Reponse venue d'un autre thread. */
+    private void answer(CommandSender sender, String key, String... pairs) {
+        if (isEnabled()) {
+            Bukkit.getScheduler().runTask(this, () -> send(sender, key, pairs));
         }
     }
 
@@ -191,6 +252,10 @@ public final class SHSkinsPaper extends JavaPlugin implements Listener, TabExecu
         List<String> out = new ArrayList<>();
         if (sender.hasPermission(PERMISSION_INFO)) {
             out.add("info");
+            out.add("morceaux");
+        }
+        if (sender.hasPermission(PERMISSION_ACCOUNT)) {
+            out.add("compte");
         }
         if (sender.hasPermission(PERMISSION_RELOAD)) {
             out.add("reload");
@@ -203,6 +268,10 @@ public final class SHSkinsPaper extends JavaPlugin implements Listener, TabExecu
         if (args.length == 1) {
             String prefix = args[0].toLowerCase(Locale.ROOT);
             return allowedSubcommands(sender).stream().filter(s -> s.startsWith(prefix)).toList();
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("compte") && sender.hasPermission(PERMISSION_ACCOUNT)) {
+            String prefix = args[1].toLowerCase(Locale.ROOT);
+            return List.of("connecter", "deconnecter").stream().filter(s -> s.startsWith(prefix)).toList();
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("info") && sender.hasPermission(PERMISSION_INFO)) {
             String prefix = args[1].toLowerCase(Locale.ROOT);

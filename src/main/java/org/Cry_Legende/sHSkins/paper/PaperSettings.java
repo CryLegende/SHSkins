@@ -12,7 +12,20 @@ import java.io.File;
  * @param refreshSeconds secondes entre deux relectures des skins modifies en base
  * @param unknown        texte rendu par les placeholders quand le skin du joueur n'est pas connu
  */
-public record PaperSettings(SkinDatabase.Settings database, int refreshSeconds, String unknown) {
+public record PaperSettings(SkinDatabase.Settings database, int refreshSeconds, String unknown, Pieces pieces) {
+
+    /**
+     * Morceaux de skins.
+     *
+     * @param enabled       ce serveur peut en faire (sinon il se sert de ceux deja faits)
+     * @param application   application Microsoft qui connecte le compte Mojang
+     * @param perMinute     depots par minute du compte Mojang
+     * @param key           cle MineSkin
+     * @param reserve       depots MineSkin de l'heure jamais pris par les morceaux
+     * @param reserveNormal la meme chose pour les demandes qui ne sont pas urgentes
+     */
+    public record Pieces(boolean enabled, String application, int perMinute, String key, int reserve, int reserveNormal) {
+    }
 
     /** Lit config.yml ; un fichier illisible leve une {@link ConfigException} qui porte le fichier et l'erreur. */
     public static PaperSettings load(File file) throws ConfigException {
@@ -28,6 +41,13 @@ public record PaperSettings(SkinDatabase.Settings database, int refreshSeconds, 
                 yaml.getString("base-de-donnees.utilisateur", "shskins"),
                 yaml.getString("base-de-donnees.mot-de-passe", "")),
             Math.max(5, yaml.getInt("rafraichissement-secondes", 30)),
-            yaml.getString("placeholders.inconnu", ""));
+            yaml.getString("placeholders.inconnu", ""),
+            new Pieces(
+                yaml.getBoolean("morceaux.actif", false),
+                yaml.getString("morceaux.compte-mojang.application", "00000000402b5328").trim(),
+                Math.max(1, Math.min(20, yaml.getInt("morceaux.compte-mojang.par-minute", 16))),
+                yaml.getString("morceaux.mineskin.cle", "").trim(),
+                Math.max(0, yaml.getInt("morceaux.mineskin.reserve", 20)),
+                Math.max(0, yaml.getInt("morceaux.mineskin.reserve-non-urgent", 50))));
     }
 }

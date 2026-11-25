@@ -11,8 +11,10 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Skins des joueurs SkyHand, connectes ou non, pour les autres plugins des serveurs Paper.
@@ -96,6 +98,28 @@ public final class SHSkinsAPI {
     /** Pose le skin du joueur sur une tete existante (nom, lore et le reste de l'objet ne changent pas). */
     public static void applyHead(SkullMeta meta, UUID uuid, String name) {
         meta.setPlayerProfile(createProfile(uuid, name));
+    }
+
+    /**
+     * Morceaux d'un skin, pour une statue articulee : le client n'affiche d'une tete que la zone « tete » d'un skin, chaque
+     * morceau du corps est donc une texture a lui. Par nom de morceau ({@code torso_up}, {@code arm_r_low}...), l'empreinte
+     * textures.minecraft.net. Vide tant qu'ils ne sont pas tous faits : voir {@link #makePieces}.
+     */
+    public static Optional<Map<String, String>> getPieces(SkinData skin) {
+        SHSkinsPaper plugin = SHSkinsPaper.instance();
+        return plugin == null || skin == null ? Optional.empty() : plugin.pieces().find(skin);
+    }
+
+    /**
+     * Fait les morceaux d'un skin, une seule fois pour tout le reseau (dix depots, 10 a 20 secondes). A ne demander que pour
+     * les joueurs dont on montre, ou va peut-etre montrer, la statue : jamais pour tous les joueurs connectes.
+     *
+     * @return les morceaux, sur un autre thread s'ils ne sont pas deja faits ; en echec si c'est impossible
+     */
+    public static CompletableFuture<Map<String, String>> makePieces(SkinData skin, PiecePriority priority) {
+        SHSkinsPaper plugin = SHSkinsPaper.instance();
+        return plugin == null || skin == null ? CompletableFuture.failedFuture(new IllegalStateException("SHSkins inactif"))
+            : plugin.pieces().make(skin, priority);
     }
 
     private static SkinRegistry registry() {
