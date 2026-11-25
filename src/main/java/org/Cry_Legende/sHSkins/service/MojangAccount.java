@@ -39,7 +39,7 @@ public final class MojangAccount implements TextureHost {
     /**
      * Code a taper pour connecter le compte.
      *
-     * @param url     page ou le taper
+     * @param url     page ou le taper ; celle de Microsoft l'a deja rempli
      * @param minutes duree de validite
      */
     public record Login(String code, String url, long minutes) {
@@ -151,7 +151,9 @@ public final class MojangAccount implements TextureHost {
         }
         long expires = number(start, "expires_in", 900);
         long interval = Math.max(2, number(start, "interval", 5));
-        shown.accept(new Login(text(start, "user_code"), text(start, "verification_uri"), expires / 60));
+        String code = text(start, "user_code");
+        String page = text(start, "verification_uri");
+        shown.accept(new Login(code, live() && page != null ? page + "?otc=" + code : page, expires / 60));
         long until = System.currentTimeMillis() + expires * 1000;
         while (System.currentTimeMillis() < until) {
             Thread.sleep(interval * 1000);

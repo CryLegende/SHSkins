@@ -23,8 +23,9 @@ public record PaperSettings(SkinDatabase.Settings database, int refreshSeconds, 
      * @param key           cle MineSkin
      * @param reserve       depots MineSkin de l'heure jamais pris par les morceaux
      * @param reserveNormal la meme chose pour les demandes qui ne sont pas urgentes
+     * @param reserveLater  la meme chose pour celles qui ne font que pouvoir servir
      */
-    public record Pieces(boolean enabled, String application, int perMinute, String key, int reserve, int reserveNormal) {
+    public record Pieces(boolean enabled, String application, int perMinute, String key, int reserve, int reserveNormal, int reserveLater) {
     }
 
     /** Lit config.yml ; un fichier illisible leve une {@link ConfigException} qui porte le fichier et l'erreur. */
@@ -48,6 +49,7 @@ public record PaperSettings(SkinDatabase.Settings database, int refreshSeconds, 
                 Math.max(1, Math.min(20, yaml.getInt("morceaux.compte-mojang.par-minute", 16))),
                 yaml.getString("morceaux.mineskin.cle", "").trim(),
                 Math.max(0, yaml.getInt("morceaux.mineskin.reserve", 20)),
-                Math.max(0, yaml.getInt("morceaux.mineskin.reserve-non-urgent", 50))));
+                Math.max(0, yaml.getInt("morceaux.mineskin.reserve-non-urgent", 50)),
+                Math.max(0, yaml.getInt("morceaux.mineskin.reserve-plus-tard", 70))));
     }
 }

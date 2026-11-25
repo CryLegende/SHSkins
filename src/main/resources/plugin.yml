@@ -11,7 +11,9 @@ softdepend:
 commands:
   shskins:
     description: Administration de SHSkins
-    usage: /shskins <info|morceaux|compte|reload>
+    # En jeu, /shskins est celle du proxy
+    aliases: [shskinsadmin]
+    usage: /<command> <info|morceaux|compte|reload>
 
 permissions:
   shskins.admin:
@@ -21,12 +23,16 @@ permissions:
       shskins.admin.info: true
       shskins.admin.reload: true
       shskins.admin.compte: true
+      shskins.admin.morceaux: true
   shskins.admin.info:
-    description: /shskins info <pseudo>, le skin connu d'un joueur ; /shskins morceaux
+    description: /shskins info <pseudo>, le skin connu d'un joueur
     default: op
   shskins.admin.reload:
     description: Recharger config.yml et messages.yml
     default: op
   shskins.admin.compte:
     description: Connecter ou retirer le compte Mojang qui dépose les morceaux de skins
+    default: op
+  shskins.admin.morceaux:
+    description: Voir, faire et refaire les morceaux de skins
     default: op

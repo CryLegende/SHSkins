@@ -35,24 +35,27 @@ public final class MineSkinQueue implements TextureHost {
     private volatile String key;
     private volatile int reserve;
     private volatile int reserveNormal;
+    private volatile int reserveLater;
     private int hour = HOUR;
     private int minute = MINUTE;
     private long hourReset;
     private long minuteReset;
     private long turn;
 
-    public MineSkinQueue(String key, int reserve, int reserveNormal) {
-        configure(key, reserve, reserveNormal);
+    public MineSkinQueue(String key, int reserve, int reserveNormal, int reserveLater) {
+        configure(key, reserve, reserveNormal, reserveLater);
     }
 
     /**
      * @param reserve       depots de l'heure jamais pris
      * @param reserveNormal la meme chose pour ce qui n'est pas urgent
+     * @param reserveLater  la meme chose pour ce qui ne fait que pouvoir servir
      */
-    public void configure(String key, int reserve, int reserveNormal) {
+    public void configure(String key, int reserve, int reserveNormal, int reserveLater) {
         this.key = key;
         this.reserve = reserve;
         this.reserveNormal = reserveNormal;
+        this.reserveLater = reserveLater;
     }
 
     /** Depots encore permis cette heure. */
@@ -68,12 +71,17 @@ public final class MineSkinQueue implements TextureHost {
 
     @Override
     public synchronized long waitMs(PiecePriority priority) {
-        if (priority == PiecePriority.LATER || key == null || key.isBlank()) {
+        if (key == null || key.isBlank()) {
             return -1;
         }
         long now = System.currentTimeMillis();
         renew(now);
-        if (hour <= (priority == PiecePriority.URGENT ? reserve : reserveNormal)) {
+        int kept = switch (priority) {
+            case URGENT -> reserve;
+            case NORMAL -> reserveNormal;
+            case LATER -> reserveLater;
+        };
+        if (hour <= kept) {
             return Math.max(1000, hourReset - now);
         }
         if (minute <= 0) {

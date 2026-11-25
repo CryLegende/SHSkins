@@ -9,6 +9,6 @@ public enum PiecePriority {
     /** Une statue se montre, mais elle peut attendre. */
     NORMAL,
 
-    /** Pourrait servir : seulement si le compte Mojang est libre, jamais chez MineSkin. */
+    /** Pourrait servir : seulement s'il reste de la place, sans gener les autres. */
     LATER
 }

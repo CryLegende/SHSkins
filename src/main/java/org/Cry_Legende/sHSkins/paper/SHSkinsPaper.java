@@ -1,6 +1,7 @@
 package org.Cry_Legende.sHSkins.paper;
 
 import com.destroystokyo.paper.profile.ProfileProperty;
+import org.Cry_Legende.sHSkins.api.PiecePriority;
 import org.Cry_Legende.sHSkins.config.ConfigException;
 import org.Cry_Legende.sHSkins.config.Messages;
 import org.Cry_Legende.sHSkins.model.SkinData;
@@ -39,6 +40,7 @@ public final class SHSkinsPaper extends JavaPlugin implements Listener, TabExecu
     private static final String TEXTURES = "textures";
     private static final String PERMISSION_RELOAD = "shskins.admin.reload";
     private static final String PERMISSION_INFO = "shskins.admin.info";
+    private static final String PERMISSION_PIECES = "shskins.admin.morceaux";
     private static final String PERMISSION_ACCOUNT = "shskins.admin.compte";
 
     private static volatile SHSkinsPaper instance;
@@ -153,13 +155,16 @@ public final class SHSkinsPaper extends JavaPlugin implements Listener, TabExecu
             reload(sender);
         } else if (sub.equals("info") && sender.hasPermission(PERMISSION_INFO)) {
             info(sender, args);
-        } else if (sub.equals("morceaux") && sender.hasPermission(PERMISSION_INFO)) {
+        } else if (sub.equals("morceaux") && args.length > 1 && sender.hasPermission(PERMISSION_PIECES)) {
+            boolean again = args[1].equalsIgnoreCase("refaire");
+            pieces(sender, again && args.length > 2 ? args[2] : args[1], again && args.length > 2);
+        } else if (sub.equals("morceaux") && sender.hasPermission(PERMISSION_PIECES)) {
             send(sender, "pieces", "ready", String.valueOf(pieces.ready()), "waiting", String.valueOf(pieces.waiting()),
                 "left", String.valueOf(pieces.account().left()), "mineskin", String.valueOf(pieces.mineSkinLeft()));
         } else if (sub.equals("compte") && sender.hasPermission(PERMISSION_ACCOUNT)) {
-            account(sender, args.length < 2 ? "" : args[1].toLowerCase(Locale.ROOT));
+            account(sender, label, args.length < 2 ? "" : args[1].toLowerCase(Locale.ROOT));
         } else {
-            send(sender, "usage", "commands", String.join("|", allowedSubcommands(sender)));
+            send(sender, "usage", "label", label, "commands", String.join("|", allowedSubcommands(sender)));
         }
         return true;
     }
@@ -192,8 +197,35 @@ public final class SHSkinsPaper extends JavaPlugin implements Listener, TabExecu
         }
     }
 
+    /** Morceaux du skin d'un joueur : sont-ils faits ? Sinon (ou si on le demande), les fait. */
+    private void pieces(CommandSender sender, String name, boolean again) {
+        Optional<SkinRegistry.Entry> entry = registry.find(name);
+        if (entry.isEmpty()) {
+            send(sender, "info-unknown", "player", name);
+            return;
+        }
+        String player = entry.get().name() != null ? entry.get().name() : name;
+        if (!again && pieces.find(entry.get().skin()).isPresent()) {
+            send(sender, "pieces-ready", "player", player);
+            return;
+        }
+        if (!pieces.enabled()) {
+            send(sender, "pieces-off");
+            return;
+        }
+        send(sender, "pieces-making", "player", player);
+        long started = System.currentTimeMillis();
+        (again ? pieces.remake(entry.get().skin()) : pieces.make(entry.get().skin(), PiecePriority.URGENT)).whenComplete((made, error) -> {
+            if (error == null) {
+                answer(sender, "pieces-made", "player", player, "seconds", String.valueOf((System.currentTimeMillis() - started) / 1000));
+            } else {
+                answer(sender, "pieces-failed", "player", player, "error", String.valueOf(error.getMessage()));
+            }
+        });
+    }
+
     /** Compte Mojang qui depose les morceaux : son etat, le connecter, le retirer. */
-    private void account(CommandSender sender, String action) {
+    private void account(CommandSender sender, String label, String action) {
         MojangAccount account = pieces.account();
         switch (action) {
             case "connecter" -> account.connect(login -> answer(sender, "account-code", "code", login.code(), "url", login.url(),
@@ -215,7 +247,7 @@ public final class SHSkinsPaper extends JavaPlugin implements Listener, TabExecu
             }
             default -> {
                 if (account.name() == null) {
-                    send(sender, "account-none");
+                    send(sender, "account-none", "label", label);
                 } else if (account.pausedMinutes() > 0) {
                     send(sender, "account-paused", "account", account.name(), "minutes", String.valueOf(account.pausedMinutes()));
                 } else {
@@ -252,6 +284,8 @@ public final class SHSkinsPaper extends JavaPlugin implements Listener, TabExecu
         List<String> out = new ArrayList<>();
         if (sender.hasPermission(PERMISSION_INFO)) {
             out.add("info");
+        }
+        if (sender.hasPermission(PERMISSION_PIECES)) {
             out.add("morceaux");
         }
         if (sender.hasPermission(PERMISSION_ACCOUNT)) {
@@ -273,10 +307,16 @@ public final class SHSkinsPaper extends JavaPlugin implements Listener, TabExecu
             String prefix = args[1].toLowerCase(Locale.ROOT);
             return List.of("connecter", "deconnecter").stream().filter(s -> s.startsWith(prefix)).toList();
         }
-        if (args.length == 2 && args[0].equalsIgnoreCase("info") && sender.hasPermission(PERMISSION_INFO)) {
-            String prefix = args[1].toLowerCase(Locale.ROOT);
-            return Bukkit.getOnlinePlayers().stream().map(Player::getName)
-                .filter(n -> n.toLowerCase(Locale.ROOT).startsWith(prefix)).toList();
+        boolean pieces = args[0].equalsIgnoreCase("morceaux") && sender.hasPermission(PERMISSION_PIECES);
+        boolean again = pieces && args.length == 3 && args[1].equalsIgnoreCase("refaire");
+        if ((args.length == 2 && (pieces || (args[0].equalsIgnoreCase("info") && sender.hasPermission(PERMISSION_INFO)))) || again) {
+            String prefix = args[args.length - 1].toLowerCase(Locale.ROOT);
+            List<String> out = new ArrayList<>(Bukkit.getOnlinePlayers().stream().map(Player::getName)
+                .filter(n -> n.toLowerCase(Locale.ROOT).startsWith(prefix)).toList());
+            if (pieces && !again && "refaire".startsWith(prefix)) {
+                out.add("refaire");
+            }
+            return out;
         }
         return List.of();
     }

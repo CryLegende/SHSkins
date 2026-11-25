@@ -38,7 +38,7 @@ import java.util.concurrent.Executors;
  * Morceaux des skins ({@link SkinPart}), pour les statues articulees d'autres plugins. Un skin n'est decoupe et depose qu'a la
  * demande, une seule fois pour tout le reseau : les empreintes sont dans {@code shskins_pieces} et en memoire.
  * <p>
- * Les depots se font par le compte Mojang s'il y en a un, sinon par MineSkin.
+ * Les depots se font par le compte Mojang et par MineSkin a la fois : si l'un des deux s'arrete, l'autre continue.
  */
 public final class PieceService {
 
@@ -96,7 +96,7 @@ public final class PieceService {
         this.settings = settings;
         this.logger = logger;
         account = new MojangAccount(folder.resolve("compte-mojang.json"), settings.application(), settings.perMinute(), logger);
-        mineSkin = new MineSkinQueue(settings.key(), settings.reserve(), settings.reserveNormal());
+        mineSkin = new MineSkinQueue(settings.key(), settings.reserve(), settings.reserveNormal(), settings.reserveLater());
         worker = new Thread(this::work, "SHSkins morceaux");
         worker.setDaemon(true);
         worker.start();
@@ -105,7 +105,7 @@ public final class PieceService {
     void configure(PaperSettings.Pieces settings) {
         this.settings = settings;
         account.configure(settings.application(), settings.perMinute());
-        mineSkin.configure(settings.key(), settings.reserve(), settings.reserveNormal());
+        mineSkin.configure(settings.key(), settings.reserve(), settings.reserveNormal(), settings.reserveLater());
         wake();
     }
 
@@ -173,6 +173,20 @@ public final class PieceService {
             lock.notifyAll();
             return job.future;
         }
+    }
+
+    /** Refait tous les morceaux d'un skin (l'un d'eux s'affiche mal). */
+    CompletableFuture<Map<String, String>> remake(SkinData skin) {
+        String key = key(skin);
+        if (key != null) {
+            known.remove(key);
+            refused.remove(key);
+        }
+        return make(skin, PiecePriority.URGENT);
+    }
+
+    boolean enabled() {
+        return settings.enabled();
     }
 
     /** Skins dont les morceaux sont tous faits. */
@@ -254,11 +268,19 @@ public final class PieceService {
     private record Choice(TextureHost host, long pause) {
     }
 
-    /** Le compte Mojang d'abord ; MineSkin s'il n'y en a pas, ou s'il est en pause. */
+    /**
+     * Le compte Mojang et MineSkin deposent en meme temps : un morceau prend le premier des deux qui est libre. Ce qui ne presse
+     * pas n'use pas MineSkin tant que le compte marche.
+     */
     private Choice choose(PiecePriority priority) {
         long wait = 30_000;
+        long accountWait = account.waitMs(priority);
+        boolean accountWorks = accountWait >= 0 && accountWait < 60_000;
         for (TextureHost host : List.of(account, mineSkin)) {
-            long hostWait = host.waitMs(priority);
+            if (host == mineSkin && priority == PiecePriority.LATER && accountWorks) {
+                continue;
+            }
+            long hostWait = host == account ? accountWait : host.waitMs(priority);
             if (hostWait < 0) {
                 continue;
             }
@@ -267,10 +289,6 @@ public final class PieceService {
             }
             // Occupe : la fin de son depot reveille la file
             wait = Math.min(wait, hostWait == 0 ? 1000 : Math.max(50, hostWait));
-            // Le compte sera libre dans un instant : MineSkin ne sert que s'il est vraiment arrete
-            if (host == account && hostWait < 60_000) {
-                break;
-            }
         }
         return new Choice(null, wait);
     }

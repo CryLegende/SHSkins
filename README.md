@@ -62,7 +62,10 @@ Le client n'affiche d'une tête que la zone « tête » d'un skin : pour montrer
 
 Un skin n'est découpé que si un plugin le demande (`makePieces`), dans l'ordre de `PiecePriority` : `URGENT` (une statue va se montrer), `NORMAL`, `LATER` (pourrait servir, seulement si le compte est libre). Le nombre de joueurs connectés n'y change rien.
 
-Les dépôts se font par un **compte Mojang** (`/shskins compte connecter`, un code à taper sur microsoft.com/link) : 16 par minute, avec une pause de plus en plus longue après un refus, car Mojang suspend 24 h un compte qui insiste. Son skin change à chaque dépôt : un compte qui ne sert à rien d'autre. Son jeton est dans `compte-mojang.json`, lisible par le serveur seul, jamais dans un dépôt. Sans compte, ou pendant ses pauses, **MineSkin** prend le relais (100 dépôts par heure pour l'adresse du serveur, skins du site compris ; `morceaux.mineskin.reserve` leur en garde toujours).
+Deux sources déposent **en même temps**, et l'une continue si l'autre s'arrête :
+
+- un **compte Mojang** (`/shskinsadmin compte connecter`, un lien à ouvrir) : 16 dépôts par minute, avec une pause de plus en plus longue après un refus, car Mojang suspend 24 h un compte qui insiste. Son skin change à chaque dépôt : un compte qui ne sert à rien d'autre. Son jeton est dans `compte-mojang.json`, lisible par le serveur seul, jamais dans un dépôt ;
+- **MineSkin** : 100 dépôts par heure pour l'adresse du serveur, skins du site compris ; `morceaux.mineskin.reserve` leur en garde toujours, et ce qui ne presse pas en laisse davantage.
 
 ### Placeholders (menus et plugins tiers)
 
@@ -86,7 +89,10 @@ Skin inconnu : `placeholders.inconnu` (vide par défaut, la tête garde le skin 
 |---|---|---|---|---|
 | Proxy | `/skin` | `/skins` | Renvoie vers la page du site où changer de skin. | aucune |
 | Proxy | `/shskins reload` | — | Recharge `config.yml` et `messages.yml` ; si un fichier est illisible, la configuration précédente reste active. Vide le cache mémoire et relit les capes MineSkin. `base-de-donnees` demande un redémarrage. | `shskins.admin.reload` |
-| Serveur | `/shskins info <pseudo>` | — | Skin connu pour ce joueur : adresse de l'image et date où le proxy l'a appliqué. | `shskins.admin.info` |
+| Serveur | `/shskinsadmin info <pseudo>` | `/shskins` (console) | Skin connu pour ce joueur : adresse de l'image et date où le proxy l'a appliqué. | `shskins.admin.info` |
+| Serveur | `/shskinsadmin morceaux [pseudo]` | `/shskins` (console) | Morceaux de skins faits, en cours, dépôts permis ; avec un pseudo, les siens (les fait au besoin). | `shskins.admin.morceaux` |
+| Serveur | `/shskinsadmin morceaux refaire <pseudo>` | `/shskins` (console) | Refait tous les morceaux d'un joueur. | `shskins.admin.morceaux` |
+| Serveur | `/shskinsadmin compte [connecter\|deconnecter]` | `/shskins` (console) | Compte Mojang qui dépose les morceaux : état, connexion, retrait. | `shskins.admin.compte` |
 | Serveur | `/shskins reload` | — | Recharge `config.yml` et `messages.yml` ; `base-de-donnees` demande un redémarrage du serveur. | `shskins.admin.reload` |
 
 En jeu, `/shskins` est celle du proxy : celle des serveurs se lance depuis leur console.
