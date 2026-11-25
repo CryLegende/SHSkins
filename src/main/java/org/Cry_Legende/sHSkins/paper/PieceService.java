@@ -44,6 +44,9 @@ public final class PieceService {
 
     private static final long RETRY_MS = 10 * 60_000;
     private static final long OVERLAP_MS = 10_000;
+    /** Temps d'un depot, l'un apres l'autre. */
+    private static final long ACCOUNT_MS = 1_300;
+    private static final long MINESKIN_MS = 2_500;
 
     private record Task(String skin, SkinPart part) {
     }
@@ -238,7 +241,7 @@ public final class PieceService {
                         if (task == null) {
                             continue;
                         }
-                        Choice choice = choose(job.priority);
+                        Choice choice = choose(job);
                         if (choice.host != null) {
                             step = new Step(task, job.pieces.get(task.part), choice.host, job.priority);
                             flying.add(task);
@@ -269,15 +272,17 @@ public final class PieceService {
     }
 
     /**
-     * Le compte Mojang et MineSkin deposent en meme temps : un morceau prend le premier des deux qui est libre. Ce qui ne presse
-     * pas n'use pas MineSkin tant que le compte marche.
+     * Le compte Mojang et MineSkin deposent en meme temps : un morceau prend le premier des deux qui est libre. MineSkin ne prend
+     * que ceux qu'il finira avant le compte, et rien de ce qui ne presse pas tant que le compte marche.
      */
-    private Choice choose(PiecePriority priority) {
+    private Choice choose(Job job) {
+        PiecePriority priority = job.priority;
         long wait = 30_000;
         long accountWait = account.waitMs(priority);
         boolean accountWorks = accountWait >= 0 && accountWait < 60_000;
         for (TextureHost host : List.of(account, mineSkin)) {
-            if (host == mineSkin && priority == PiecePriority.LATER && accountWorks) {
+            if (host == mineSkin && accountWorks && (priority == PiecePriority.LATER
+                || (busy.getOrDefault(mineSkin, 0) + 1) * MINESKIN_MS >= accountWait + left(job) * ACCOUNT_MS)) {
                 continue;
             }
             long hostWait = host == account ? accountWait : host.waitMs(priority);
@@ -298,6 +303,18 @@ public final class PieceService {
         List<Job> order = new ArrayList<>(jobs.values());
         order.sort(Comparator.comparing((Job job) -> job.priority).thenComparingLong(job -> job.asked));
         return order;
+    }
+
+    /** Morceaux d'un skin que personne n'a encore pris. */
+    private int left(Job job) {
+        Map<String, String> done = known.getOrDefault(job.skin, Map.of());
+        int left = 0;
+        for (SkinPart part : SkinPart.values()) {
+            if (job.same.get(part) == part && !done.containsKey(part.key()) && !flying.contains(new Task(job.skin, part))) {
+                left++;
+            }
+        }
+        return left;
     }
 
     private Task missing(Job job) {
